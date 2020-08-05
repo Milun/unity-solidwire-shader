@@ -71,8 +71,14 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
+    - _WireCornerSize: 800
+    - _WireCornerStrength: 1.5
+    - _WireHighlight: 3
+    - _WireStrength: 1.5
     - _ZWrite: 1
     m_Colors:
+    - _AlbedoColor: {r: 0, g: 0, b: 0, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _WireColor: {r: 1, g: 0, b: 0.9561806, a: 1}
   m_BuildTextureStacks: []

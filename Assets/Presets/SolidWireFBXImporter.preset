@@ -6,7 +6,7 @@ Preset:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Vectrex3DFBXImporter
+  m_Name: SolidWireFBXImporter
   m_TargetType:
     m_NativeTypeID: 1041
     m_ManagedTypePPtr: {fileID: 0}
