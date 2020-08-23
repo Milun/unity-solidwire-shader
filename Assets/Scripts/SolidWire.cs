@@ -73,6 +73,8 @@ public class SolidWire : MonoBehaviour
         int vertsPosStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4));
         vertsPosRWBuffer = new ComputeBuffer(vertCount, vertsPosStride, ComputeBufferType.Default);
         material.SetBuffer("vertsPosBuffer", vertsPosRWBuffer);
+
+        Debug.Log(gameObject.name + ": " + vertCount);
     }
 
     /// <summary>
@@ -129,6 +131,7 @@ public class SolidWire : MonoBehaviour
         }
 
         int[] output = new int[] { t0, t1, t2 };
+        Debug.Log(t0 + " " + t1 + " " + t2);
 
         return output;
     }

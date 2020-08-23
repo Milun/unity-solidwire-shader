@@ -50,7 +50,7 @@
                 * Reduce the size of the solid body along its normals so that it doesn't cause z-fighting with the Wire pass,
                 * but still obscures any lines which would normally be obscured by geometry closer to the camera.
                 */
-                v.vertex.xyz -= normalize(v.normal) * 0.05; 
+                v.vertex.xyz -= normalize(v.normal) * 0.0005; 
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.idxType = (int2)v.uv;
 
