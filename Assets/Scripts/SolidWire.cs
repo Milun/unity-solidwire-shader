@@ -20,7 +20,6 @@ public class SolidWire : MonoBehaviour
 
         uint[] tris = (uint[])(object)mesh.triangles;
         triIdxCount = tris.Length;
-        int vertCount = mesh.vertices.Length;
 
         // triIdxBuffer
         // ============
@@ -70,11 +69,12 @@ public class SolidWire : MonoBehaviour
 
         // vertsPosRWBuffer
         // ================
+        int vertCount = mesh.vertexCount * 2; // Weird bug: If mesh.vertexCount is used for the buffer, it won't be enough.
+                                              // Not sure how to get the actual number, so * 2 added as a quickfix for now.
+
         int vertsPosStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4));
         vertsPosRWBuffer = new ComputeBuffer(vertCount, vertsPosStride, ComputeBufferType.Default);
         material.SetBuffer("vertsPosBuffer", vertsPosRWBuffer);
-
-        Debug.Log(gameObject.name + ": " + vertCount);
     }
 
     /// <summary>
@@ -131,7 +131,10 @@ public class SolidWire : MonoBehaviour
         }
 
         int[] output = new int[] { t0, t1, t2 };
-        Debug.Log(t0 + " " + t1 + " " + t2);
+        //if (output[0] > 128) output[0] = 128;
+        //if (output[1] > 128) output[1] = 128;
+        //if (output[2] > 128) output[2] = 128;
+        //Debug.Log(t0 + " " + t1 + " " + t2);
 
         return output;
     }

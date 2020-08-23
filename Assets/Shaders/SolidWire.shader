@@ -199,6 +199,10 @@
             bool isTriCulledByIdx(uint triIdx)
             {
                 uint3 t = triIdxBuffer[triIdx];
+
+                //if (t.x >= 256 || t.y >= 256 || t.z >= 256) return true;
+                //return false;
+
                 float2 p0 = vertsPosRWBuffer[t.x].xy / vertsPosRWBuffer[t.x].w;
                 float2 p1 = vertsPosRWBuffer[t.y].xy / vertsPosRWBuffer[t.y].w;
                 float2 p2 = vertsPosRWBuffer[t.z].xy / vertsPosRWBuffer[t.z].w;
