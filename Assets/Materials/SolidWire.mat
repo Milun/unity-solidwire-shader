@@ -71,7 +71,7 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
-    - _WireCornerSize: 800
+    - _WireCornerSize: 400
     - _WireCornerStrength: 1.5
     - _WireHighlight: 3
     - _WireStrength: 1.5

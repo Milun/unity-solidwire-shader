@@ -15,6 +15,27 @@ ModelImporter:
   - first:
       74: 1751737975508987024
     second: Cube.001|Cube.009Action.001
+  - first:
+      74: 124502459737809754
+    second: dress|Cube.009Action
+  - first:
+      74: 302329260399413637
+    second: dress|Cube.009Action.001
+  - first:
+      74: 126850670934128279
+    second: scarf|Cube.009Action
+  - first:
+      74: 238034923935228800
+    second: scarf|Cube.009Action.001
+  - first:
+      74: 1780227308624558824
+    second: body|Cube.009Action
+  - first:
+      74: 8537803354803819913
+    second: body|Cube.009Action.001
+  - first:
+      74: -8197248997919993087
+    second: legs|Cube.009Action
   externalObjects: {}
   materials:
     materialImportMode: 1

@@ -10,9 +10,11 @@
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Opaque" "IgnoreProjector" = "True" }
         LOD 200
         Cull Back
+        //ZWrite Off
+        //ZTest On
 
         Pass
         {
@@ -50,8 +52,24 @@
                 * Reduce the size of the solid body along its normals so that it doesn't cause z-fighting with the Wire pass,
                 * but still obscures any lines which would normally be obscured by geometry closer to the camera.
                 */
-                v.vertex.xyz -= normalize(v.normal) * 0.0005; 
+
+                //float multiplier = unity_OrthoParams.x * 0.1;
+
+                // * I needed to ensure that the contraction of the verts was consistant regardless of mesh scale, so I did this.
+                // There's probably a better way to do this, but this works for now.
+
+                // Get the normal clip pos.
                 o.pos = UnityObjectToClipPos(v.vertex);
+
+                // Get what the clip pos would be if the vert was moved along its normal by 1.
+                float4 posExt = UnityObjectToClipPos(v.vertex.xyz - normalize(v.normal));
+
+                // Create a vector between the two pos vectors...
+                float4 diff = o.pos - posExt;
+
+                // ...and then make it consistant regardless of size.
+                o.pos -= normalize(diff) * 0.005;
+
                 o.idxType = (int2)v.uv;
 
                 return o;
