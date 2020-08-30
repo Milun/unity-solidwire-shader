@@ -1,0 +1,16 @@
+Installation instructions
+=========================
+- Open Blender
+- Open a Text Editor window in Blender, and import this script.
+- Select the mesh(es) you want to convert to be SolidWire compatible.
+- Open a Python Console window in Blender and type and run the following:
+
+exev(bpy.data.texts["scr_BlenderSolidWireExport.py"].as_string(), {})
+
+- You can now export your selected meshes as a .fbx (or whatever format you want) for use in Unity.
+
+WARNING
+=======
+The scr_BlenderSolidWireExport.py script was written for Blender v2.79b.
+It is NOT compatible with Blender version 2.8 onwards (as of the time of writing this).
+
