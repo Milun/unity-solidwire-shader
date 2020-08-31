@@ -64,5 +64,9 @@ You'll need to copy the SolidWire shader, material, and script to your other pro
 
 I've added comments all throughout my code if you desire additional information.
 
+### Special thanks
+
+A special thanks goes out to the friendly folk of Unity's forums for helping me out in getting this project started.
+
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
