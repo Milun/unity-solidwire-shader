@@ -257,8 +257,6 @@
                 float edge2Length = length(p0 - p2);
                 float cornerSize = 1000 - _WireCornerSize;
 
-                g2f o = (g2f)0;
-
                 // Loose edges
                 // ===========
                 if (IN[0].idxType.y < 0){
