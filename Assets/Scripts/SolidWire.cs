@@ -69,7 +69,7 @@ public class SolidWire : MonoBehaviour
 
         // vertsPosRWBuffer
         // ================
-        int vertCount = mesh.vertexCount * 2; // Weird bug: If mesh.vertexCount is used for the buffer, it won't be enough.
+        int vertCount = mesh.vertexCount * 4; // Weird bug: If mesh.vertexCount is used for the buffer, it won't be enough.
                                               // Not sure how to get the actual number, so * 2 added as a quickfix for now.
 
         int vertsPosStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4));
