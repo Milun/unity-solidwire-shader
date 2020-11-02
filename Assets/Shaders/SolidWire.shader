@@ -10,7 +10,9 @@
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
+        //Tags { "RenderType"="Opaque" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
+        Tags { "Queue" = "Transparent" "RenderType" = "Transparent" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
+        Blend SrcAlpha OneMinusSrcAlpha
         LOD 200
         Cull Back
         //ZWrite Off
@@ -23,7 +25,7 @@
          */
         Pass
         {
-            Name "EditorOutline"
+            Name "EditorWire"
 
             Cull Front
             //ZWrite Off
@@ -142,7 +144,7 @@
             CGPROGRAM
             #include "UnityCG.cginc"
             #pragma vertex vert
-            #pragma fragment frag
+            #pragma fragment frag alpha
             #pragma geometry geom
 
             struct appdata
@@ -228,7 +230,7 @@
 
             fixed4 frag(g2f IN) : SV_Target
             {
-                return fixed4(0,0,0,0);
+                return fixed4(0,0,0,1);
             }
             ENDCG
         }
@@ -332,6 +334,21 @@
                 o.dist.z = 1.0 / o.pos.w;
                 OUT.Append(o);
 
+                // New
+                /*OUT.RestartStrip();
+
+                o.pos = p1;
+                o.pos.xy += float2(1,1) * 0.002 * o.pos.w;
+                o.dist.xy = float2(edgeLength, 0.0) * o.pos.w * cornerSize;
+                o.dist.z = 1.0 / o.pos.w;
+                OUT.Append(o);
+
+                o.pos = p2;
+                o.pos.xy += float2(1, 1) * 0.002 * o.pos.w;
+                o.dist.xy = float2(0.0, edgeLength) * o.pos.w * cornerSize;
+                o.dist.z = 1.0 / o.pos.w;
+                OUT.Append(o);*/
+
                 OUT.RestartStrip();
             }
 
@@ -389,14 +406,6 @@
                 float edge2Length = length(p0 - p2);
                 float cornerSize = 1000 - _WireCornerSize;
 
-                // While in edit mode, all edges will be drawn.
-                /*if (triIdxCount == 0) {
-                    appendEdge(IN[1].pos, IN[2].pos, edge1Length, cornerSize, OUT);
-                    appendEdge(IN[2].pos, IN[0].pos, edge2Length, cornerSize, OUT);
-                    appendEdge(IN[0].pos, IN[1].pos, edge0Length, cornerSize, OUT);
-                    return;
-                }*/
-
                 // Loose edges
                 // ===========
                 if (IN[0].idxType.y < 0){
@@ -444,12 +453,15 @@
                 
                 // Normal line color.
                 if (minDistanceToCorner > 0.9) {
-                    return (half4)_WireColor * _WireStrength;
+                    half4 color = (half4)_WireColor * _WireStrength;
+                    //color.a = 0.2;
+                    return color;
                 }
 
                 // Corner highlight color.
                 half4 cornerColor = (half4)_WireColor;
                 cornerColor.xyz += half3(0.2,0.2,0.2); // Corners are slightly lighter.
+                //cornerColor.a = 0.2;
 
                 return (half4)cornerColor * _WireStrength * _WireCornerStrength;
             }

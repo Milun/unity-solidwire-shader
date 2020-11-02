@@ -254,7 +254,7 @@ Preset:
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: tangentImportMode
-    value: 0
+    value: 2
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: normalCalculationMode
