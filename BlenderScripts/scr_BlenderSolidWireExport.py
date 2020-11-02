@@ -1,7 +1,10 @@
 import bpy
 import bmesh
 import os
+import sys
+from io import StringIO
 from bpy import context
+from bpy.types import Operator, Macro
 
 '''
     Author:
@@ -46,6 +49,34 @@ LHIDE = 0 # Never draw
 LNORMAL = 1 # Draw when an edge
 LALWAYS = 2 # Always draw if not culled
 
+DUPELAYER = 19
+
+HIDE_FBX_LOGS = False
+
+# The following modifiers 
+MODIFIERS_TO_APPLY = [
+    "BEVEL",
+    "BOOLEAN",
+    "BUILD",
+    "DECIMATE",
+    "EDGE_SPLIT",
+    "MASK",
+    "MIRROR",
+    "MULTIRESOLUTION",
+    "REMESH",
+    "SCREW",
+    "SKIN",
+    "SOLIDIFY",
+    "SUBSURF",
+    "TRIANGULATE",
+    "WIREFRAME"
+]
+
+# Used to prevent printing the FBX export to console.
+class NullIO(StringIO):
+    def write(self, txt):
+       pass
+
 # Source: https://blender.stackexchange.com/questions/45698/triangulate-mesh-in-python
 def triangulateObject(obj):
     me = obj.data
@@ -59,202 +90,325 @@ def triangulateObject(obj):
     bm.to_mesh(me)
     bm.free()
 
-# Record which objects are selected when this is called.
-selected = bpy.context.selected_objects
+# Hopefully these can be accessed between multiple functions.
+selected = []
+exportObjs = []
+dupes = []
+originalNames = []
 
-# Deselect all objects.
-for o in bpy.context.selected_objects:
-    o.select = False
-    
-# For each of the objects that was just selected.
-for objIdx, objCur in enumerate(selected):
-    
-    print("Processing object \"%s\"." % objCur.name)
-    
-    # Select the current object
-    objCur.select = True
-    
-    # Make the object active too
-    bpy.context.scene.objects.active = bpy.data.objects[objCur.name]
-    
-    # Store reference to Mesh.
-    mesh = objCur.data
+active = False # The active object when the script is ran.
 
-    # Triangulate the mesh.
-    triangulateObject(objCur)
+'''
+print("!!! WARNING !!!")
+print("!!! When ExportSolidWire is ran, it will DELETE EVERYTHING in layer 20! !!!")
+print("!!! I couldn't figure out how to make it delete all temporary dupes after exporting to .fbx, and this was the workaround. !!!")
+'''
 
-    # Ensure smooth shading.
-    for f in mesh.polygons:
-        f.use_smooth = True
+def processSelection():
 
-    # bmesh requires EDIT mode.
-    # This will change the active object to EDIT mode.
-    bpy.ops.object.mode_set(mode = 'EDIT')
-    bm = bmesh.from_edit_mesh(mesh)
+    print("Running: BlenderSolidWireExport")
 
-    # Store an array of all edges
-    edges = [e for e in bm.edges]
+    print("--------------------------------------------------")
 
-    # Find all the verts with no faces attached.
-    looseVerts = [v for v in bm.verts if not v.link_faces]
-    
-    # Find all edges that aren't part of faces.
-    looseData = []
-    for e in edges:
+    #objects = bpy.context.scene.objects
+    active = bpy.context.scene.objects.active
+
+    # Record which objects are selected when this is called.
+    selected = bpy.context.selected_objects
+
+    # Create an array of all objects which will be used for the export.
+    # (Duped meshes + all non-mesh objects that were selected)
+    exportObjs = []
+    dupes = []
+    originalNames = []
         
-        # This edge has a loose vert if it's contained in the looseVerts array.
-        if e.verts[0] in looseVerts or e.verts[1] in looseVerts:
+    # For each of the objects that was just selected.
+    for objIdx, objCur in enumerate(selected):
+        
+        # Deselect all objects.
+        for o in bpy.context.selected_objects:
+            o.select = False
+
+        # Record the names of the selected objects.
+        originalNames.append(objCur.name)
+
+        # Only process meshes.
+        if objCur.type != 'MESH':
+            print("Processing skipped for object \"%s\" (%s)" % (objCur.name, objCur.type))
+            exportObjs.append(objCur)
+            continue
+
+        print("Processing object \"%s\"." % objCur.name)
+
+        # Select the current object
+        objCur.select = True
+
+        # Duplicate the mesh so as not to affect the original
+        bpy.context.scene.objects.active = objCur
+        bpy.ops.object.duplicate_move()
+        _original = objCur
+        objCur = bpy.context.scene.objects.active
+        exportObjs.append(objCur)
+        dupes.append(objCur)
+
+        # Swap names with the original (we need the dupe to have the right name when exporting):
+        _original.name = objCur.name + ".___temp"
+        objCur.name = originalNames[objIdx]
+        
+        # Make the object active too
+        bpy.context.scene.objects.active = bpy.data.objects[objCur.name]
+        
+        # Apply certain modifiers to the dupes.
+        for modifier in objCur.modifiers:
+            if modifier.type in MODIFIERS_TO_APPLY:
+                print("----- Modifier applied: %s" % (modifier.name))
+                bpy.ops.object.modifier_apply(modifier=modifier.name)
+
+        # Store reference to Mesh.
+        mesh = objCur.data
+
+        # Triangulate the mesh.
+        triangulateObject(objCur)
+
+        # Ensure smooth shading.
+        for f in mesh.polygons:
+            f.use_smooth = True
+
+        # bmesh requires EDIT mode.
+        # This will change the active object to EDIT mode.
+        bpy.ops.object.mode_set(mode = 'EDIT')
+        bm = bmesh.from_edit_mesh(mesh)
+
+        # Store an array of all edges
+        edges = [e for e in bm.edges]
+
+        # Find all the verts with no faces attached.
+        looseVerts = [v for v in bm.verts if not v.link_faces]
+        
+        # Find all edges that aren't part of faces.
+        looseData = []
+        for e in edges:
             
-            # Mark the existing edge as a sharp edge (it should always be drawn in Unity).
-            e.smooth = False
+            # This edge has a loose vert if it's contained in the looseVerts array.
+            if e.verts[0] in looseVerts or e.verts[1] in looseVerts:
+                
+                # Mark the existing edge as a sharp edge (it should always be drawn in Unity).
+                e.smooth = False
 
-            # Store the group indexes for all vertex groups vertex[0] belongs to.
-            # (This is done so that armature weights can be duplicated to the new vert).
-            vert0Groups = []
-            for g in mesh.vertices[e.verts[0].index].groups:
-                vert0Groups.append(type('_group', (object,), {
-                    'group': g.group,
-                    'weight': g.weight
-                })())
-                #g.weight = 0
-                #print("G %i, %i, %f" % (e.verts[0].index, g.group, g.weight))
+                # Store the group indexes for all vertex groups vertex[0] belongs to.
+                # (This is done so that armature weights can be duplicated to the new vert).
+                vert0Groups = []
+                for g in mesh.vertices[e.verts[0].index].groups:
+                    vert0Groups.append(type('_group', (object,), {
+                        'group': g.group,
+                        'weight': g.weight
+                    })())
+                    #g.weight = 0
+                    #print("G %i, %i, %f" % (e.verts[0].index, g.group, g.weight))
 
-            # Store the loose edge data in an array for later modification.
-            el = type('looseedgedata', (object,), {
-                'vertIndexes':[e.verts[0].index,e.verts[1].index],
-                'vert0co':e.verts[0].co,
-                'vert0Groups': vert0Groups
-            })()
-            looseData.append(el)
-    
-    # Go back to object mode to enable modifying the mesh.
-    bpy.ops.object.mode_set(mode = 'OBJECT')
+                # Store the loose edge data in an array for later modification.
+                el = type('looseedgedata', (object,), {
+                    'vertIndexes':[e.verts[0].index,e.verts[1].index],
+                    'vert0co':e.verts[0].co,
+                    'vert0Groups': vert0Groups
+                })()
+                looseData.append(el)
+        
+        # Go back to object mode to enable modifying the mesh.
+        bpy.ops.object.mode_set(mode = 'OBJECT')
 
-    # Create the third vert for each loose edge, and have it be in the same location as its vert[0].
-    for e in looseData:
-        mesh.vertices.add(1)
-        mesh.vertices[-1].co = e.vert0co
-        e.vertIndexes.append(len(mesh.vertices)-1)
+        # Create the third vert for each loose edge, and have it be in the same location as its vert[0].
+        for e in looseData:
+            mesh.vertices.add(1)
+            mesh.vertices[-1].co = e.vert0co
+            e.vertIndexes.append(len(mesh.vertices)-1)
 
-        # Clear any group data that may exist for the new vert's index from the vertex_groups.
-        # If this isn't done, then the new vert might gain unintended weights upon creation.
-        vi = len(mesh.vertices)-1
-        for gr in objCur.vertex_groups:
-            gr.remove([vi])
-
-        # Add the new vert to the same vertex_groups as the one it was a clone of.
-        for g in e.vert0Groups:
+            # Clear any group data that may exist for the new vert's index from the vertex_groups.
+            # If this isn't done, then the new vert might gain unintended weights upon creation.
+            vi = len(mesh.vertices)-1
             for gr in objCur.vertex_groups:
-                if gr.index == g.group:
-                    if g.weight != 0:
-                        #print("NAME: %i, %i, %f, %s" % (vi, g, g, gr.name))
-                        gr.add([vi], g.weight, 'ADD')
-    
-    # Connect the loose edge to the new vert to create a new tri.
-    bpy.ops.object.mode_set(mode = 'EDIT')
-    bm = bmesh.from_edit_mesh(mesh)
-    bm.verts.ensure_lookup_table() # Applies the newly created verts to Blender.
-    for e in looseData:
-        bm.faces.new((
-            bm.verts[e.vertIndexes[0]],
-            bm.verts[e.vertIndexes[1]],
-            bm.verts[e.vertIndexes[2]]
-        ))
-    
-    # Applies the newly created data (refreshes the indexes).
-    bpy.ops.object.mode_set(mode = 'OBJECT')
-    bpy.ops.object.mode_set(mode = 'EDIT')
-    bm = bmesh.from_edit_mesh(mesh)
+                gr.remove([vi])
 
-    # Just in case (may not be necessary)
-    bm.verts.ensure_lookup_table()
-    bm.edges.ensure_lookup_table()
-    bm.faces.ensure_lookup_table()
-
-    # Go through all faces and find any tris which have 2 verts in the exact same position.
-    # For those tris that do, mark two of their edges as "fake" (the SolidWire shader in Unity will never draw them).
-    fakeEdges = []
-    for f in bm.faces:
-        # If two verts match, then it's a fake face.
-        if f.edges[0].verts[0].co == f.edges[0].verts[1].co:
-            fakeEdges.append(f.edges[0].index)
-            fakeEdges.append(f.edges[1].index)
-
-        if f.edges[1].verts[0].co == f.edges[1].verts[1].co:
-            fakeEdges.append(f.edges[1].index)
-            fakeEdges.append(f.edges[2].index)
-            
-        if f.edges[2].verts[0].co == f.edges[2].verts[1].co:
-            fakeEdges.append(f.edges[2].index)
-            fakeEdges.append(f.edges[0].index)
-
-    # Store all relevant edge data to the SolidWire export.
-    edgeData = []
-    for e in bm.edges:
-        v = []
-        v.append(e.verts[0].index)
-        v.append(e.verts[1].index)
-
-        t = LNORMAL
-        if e.smooth == False:
-            t = LALWAYS
-        if e.seam == True:
-            t = LHIDE
-        if e.index in fakeEdges:
-            t = LNEVER
-
-        el = type('edgedata', (object,), {
-                'verts':v,
-                'type':t
-            })()
-
-        edgeData.append(el)
-
-
-
-    # Assigning edgeData to the vert UVs
-    # ==================================
-
-    # Unwrap all verts (they'll be modified in a second).
-    bpy.ops.mesh.select_all(action = 'SELECT')
-    bpy.ops.uv.unwrap()
-    bpy.ops.object.mode_set(mode = 'OBJECT')
-
-    # Gets the edgeData object based on the two verts.
-    def getEdgeData(v0, v1):
-        for e in edgeData:
-            if v0 in e.verts and v1 in e.verts:
-                flipped = False
-                if e.verts[0] == v1: flipped = True
-                return e, flipped
-        print("ERROR: getEdgeData could not find a matching edge!")
-        return 0
-
-    # Set the UVs for all verts.
-    # Rules:
-    # - If the edge from v0 to v1 is sharp, then v0 will have the sharp UVs set.
-    # - If the edge from v1 to v2 is sharp, then v1 will have the sharp UVs set.
-    # - etc.
-    test = 0
-    for face in mesh.polygons:
-
-        edge1, f1 = getEdgeData(face.vertices[0], face.vertices[1])
-        edge2, f2 = getEdgeData(face.vertices[1], face.vertices[2])
-        edge3, f3 = getEdgeData(face.vertices[2], face.vertices[0])
+            # Add the new vert to the same vertex_groups as the one it was a clone of.
+            for g in e.vert0Groups:
+                for gr in objCur.vertex_groups:
+                    if gr.index == g.group:
+                        if g.weight != 0:
+                            #print("NAME: %i, %i, %f, %s" % (vi, g, g, gr.name))
+                            gr.add([vi], g.weight, 'ADD')
         
-        f1 = False
-        f2 = False
-        f3 = False
+        # Connect the loose edge to the new vert to create a new tri.
+        bpy.ops.object.mode_set(mode = 'EDIT')
+        bm = bmesh.from_edit_mesh(mesh)
+        bm.verts.ensure_lookup_table() # Applies the newly created verts to Blender.
+        for e in looseData:
+            bm.faces.new((
+                bm.verts[e.vertIndexes[0]],
+                bm.verts[e.vertIndexes[1]],
+                bm.verts[e.vertIndexes[2]]
+            ))
+        
+        # Applies the newly created data (refreshes the indexes).
+        bpy.ops.object.mode_set(mode = 'OBJECT')
+        bpy.ops.object.mode_set(mode = 'EDIT')
+        bm = bmesh.from_edit_mesh(mesh)
 
-        i1 = face.loop_indices[0 if not f1 else 1]
-        i2 = face.loop_indices[1 if not f2 else 2]
-        i3 = face.loop_indices[2 if not f3 else 0]
+        # Just in case (may not be necessary)
+        bm.verts.ensure_lookup_table()
+        bm.edges.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
 
-        # Assign edgeData here.
-        mesh.uv_layers.active.data[face.loop_indices[0]].uv.x = face.vertices[0]
-        mesh.uv_layers.active.data[face.loop_indices[1]].uv.x = face.vertices[1]
-        mesh.uv_layers.active.data[face.loop_indices[2]].uv.x = face.vertices[2]
+        # Go through all faces and find any tris which have 2 verts in the exact same position.
+        # For those tris that do, mark two of their edges as "fake" (the SolidWire shader in Unity will never draw them).
+        fakeEdges = []
+        for f in bm.faces:
+            # If two verts match, then it's a fake face.
+            if f.edges[0].verts[0].co == f.edges[0].verts[1].co:
+                fakeEdges.append(f.edges[0].index)
+                fakeEdges.append(f.edges[1].index)
 
-        mesh.uv_layers.active.data[i1].uv.y = edge1.type
-        mesh.uv_layers.active.data[i2].uv.y = edge2.type
-        mesh.uv_layers.active.data[i3].uv.y = edge3.type
+            if f.edges[1].verts[0].co == f.edges[1].verts[1].co:
+                fakeEdges.append(f.edges[1].index)
+                fakeEdges.append(f.edges[2].index)
+                
+            if f.edges[2].verts[0].co == f.edges[2].verts[1].co:
+                fakeEdges.append(f.edges[2].index)
+                fakeEdges.append(f.edges[0].index)
+
+        # Store all relevant edge data to the SolidWire export.
+        edgeData = []
+        for e in bm.edges:
+            v = []
+            v.append(e.verts[0].index)
+            v.append(e.verts[1].index)
+
+            t = LNORMAL
+            if e.smooth == False:
+                t = LALWAYS
+            if e.seam == True:
+                t = LHIDE
+            if e.index in fakeEdges:
+                t = LNEVER
+
+            el = type('edgedata', (object,), {
+                    'verts':v,
+                    'type':t
+                })()
+
+            edgeData.append(el)
+
+
+
+        # Assigning edgeData to the vert UVs
+        # ==================================
+
+        # Unwrap all verts (they'll be modified in a second).
+        bpy.ops.mesh.select_all(action = 'SELECT')
+        bpy.ops.uv.unwrap()
+        bpy.ops.object.mode_set(mode = 'OBJECT')
+
+        # Gets the edgeData object based on the two verts.
+        def getEdgeData(v0, v1):
+            for e in edgeData:
+                if v0 in e.verts and v1 in e.verts:
+                    flipped = False
+                    if e.verts[0] == v1: flipped = True
+                    return e, flipped
+            print("ERROR: getEdgeData could not find a matching edge!")
+            return 0
+
+        # Set the UVs for all verts.
+        # Rules:
+        # - If the edge from v0 to v1 is sharp, then v0 will have the sharp UVs set.
+        # - If the edge from v1 to v2 is sharp, then v1 will have the sharp UVs set.
+        # - etc.
+        for face in mesh.polygons:
+
+            edge1, f1 = getEdgeData(face.vertices[0], face.vertices[1])
+            edge2, f2 = getEdgeData(face.vertices[1], face.vertices[2])
+            edge3, f3 = getEdgeData(face.vertices[2], face.vertices[0])
+            
+            f1 = False
+            f2 = False
+            f3 = False
+
+            i1 = face.loop_indices[0 if not f1 else 1]
+            i2 = face.loop_indices[1 if not f2 else 2]
+            i3 = face.loop_indices[2 if not f3 else 0]
+
+            # Get the material assigned to this tri, and add its index to the u.y
+            matIndex = face.material_index / 100
+            matIndex = 0
+            #face.material_index = 0 # Don't export the different materials.
+
+            # Assign edgeData here.
+            mesh.uv_layers.active.data[face.loop_indices[0]].uv.x = face.vertices[0]
+            mesh.uv_layers.active.data[face.loop_indices[1]].uv.x = face.vertices[1]
+            mesh.uv_layers.active.data[face.loop_indices[2]].uv.x = face.vertices[2]
+
+            mesh.uv_layers.active.data[i1].uv.y = edge1.type + matIndex
+            mesh.uv_layers.active.data[i2].uv.y = edge2.type + matIndex
+            mesh.uv_layers.active.data[i3].uv.y = edge3.type + matIndex
+    
+    print("--------------------------------------------------")
+
+    # Deselect all objects.
+    for o in bpy.context.selected_objects:
+        o.select = False
+
+    # Select all objects for exporting.
+    for o in exportObjs:
+        o.select = True
+
+    print("Exporting to FBX.")
+
+    # Prevent bpy.ops.export_scene.fbx from filling the console with its prints.
+    if HIDE_FBX_LOGS == False:
+        temp = sys.stdout
+        sys.stdout = NullIO()
+
+    # "filename" defined when the script is called.
+    filepath = bpy.data.filepath
+    directory = os.path.dirname(filepath)
+    bpy.ops.export_scene.fbx(
+        filepath = os.path.join( dir if dir else directory, filename + ".fbx"), # Either save to the "dir" provided, 
+        use_selection = True,
+        apply_scale_options = 'FBX_SCALE_ALL',
+        bake_space_transform = True, # Needs to be False if an armature is being used?
+        check_existing = True
+    )
+
+    # Re-enable printing to console.
+    if HIDE_FBX_LOGS == False:
+        sys.stdout = temp
+
+    print("Removing dupes.")
+
+    # Deselect all objects.
+    for o in bpy.context.selected_objects:
+        o.select = False
+
+    # Select and delete all the dupes.
+    for o in dupes:
+        o.select = True
+        bpy.context.scene.objects.active = o
+        bpy.ops.object.delete()
+
+    # Select all the originally selected meshes. 
+    for i, o in enumerate(selected):
+        o.select = True
+        o.name = originalNames[i] # Swap the names back 
+        if o == active:
+            bpy.context.scene.objects.active = o
+
+    # Store these values globally for the removeDupes function to use
+    # (FIXME: there's probably a smarter way to do this)
+    '''bpy.context.object["solidWireSelected"] = selected
+    bpy.context.object["solidWireExportObjs"] = exportObjs
+    bpy.context.object["solidWireDupes"] = dupes'''
+
+
+# There seems to be no way to have Blender export a .fbx using INVOKE_DEFAULT, and then have call a script only after the user has saved their file.
+# This is why I had to do it this way.
+processSelection()
+
