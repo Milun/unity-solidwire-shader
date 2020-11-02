@@ -425,9 +425,11 @@
                 if (isEdgeDrawn(adj.x, IN[1].idxType.y)){
                     appendEdge(IN[0].pos, IN[1].pos, edge0Length, cornerSize, OUT);
                 }
+                // edge1
                 if (isEdgeDrawn(adj.y, IN[2].idxType.y)){
                     appendEdge(IN[1].pos, IN[2].pos, edge1Length, cornerSize, OUT);
                 }
+                // edge2
                 if (isEdgeDrawn(adj.z, IN[0].idxType.y)){
                     appendEdge(IN[2].pos, IN[0].pos, edge2Length, cornerSize, OUT);
                 }
