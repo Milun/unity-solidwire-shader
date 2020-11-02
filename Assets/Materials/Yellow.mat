@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: SolidWire
+  m_Name: Yellow
   m_Shader: {fileID: 4800000, guid: 32a9c69166957fc4f9bdc60e41340796, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
@@ -71,14 +71,12 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
-    - _WireCornerSize: 400
-    - _WireCornerStrength: 1.5
-    - _WireHighlight: 3
-    - _WireStrength: 1.5
+    - _WireCornerSize: 0
+    - _WireCornerStrength: 0.8
+    - _WireStrength: 1
     - _ZWrite: 1
     m_Colors:
-    - _AlbedoColor: {r: 0, g: 0, b: 0, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _WireColor: {r: 1, g: 1, b: 1, a: 1}
+    - _WireColor: {r: 0.9866247, g: 1, b: 0, a: 1}
   m_BuildTextureStacks: []

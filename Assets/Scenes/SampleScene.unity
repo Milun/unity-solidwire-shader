@@ -442,6 +442,10 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: 509708f2935d9f443948214111c2c061, type: 2}
+    - target: {fileID: -5928395085533954453, guid: c0e5dc1cc9098434b8973555f9e71485, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 779bae7c5d26d814dbccb8a4568c97b0, type: 2}
     - target: {fileID: -1206874426333947015, guid: c0e5dc1cc9098434b8973555f9e71485, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
@@ -450,46 +454,16 @@ PrefabInstance:
       propertyPath: m_Name
       value: Stickbug
       objectReference: {fileID: 0}
+    - target: {fileID: 2223639932434330405, guid: c0e5dc1cc9098434b8973555f9e71485, type: 3}
+      propertyPath: m_Animations.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4870801407698984332, guid: c0e5dc1cc9098434b8973555f9e71485, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 509708f2935d9f443948214111c2c061, type: 2}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c0e5dc1cc9098434b8973555f9e71485, type: 3}
---- !u!114 &1256902661
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1637185576}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b1eb07ca90327754995634afc7e85a40, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!1 &1618114748 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -398321088993075008, guid: c0e5dc1cc9098434b8973555f9e71485, type: 3}
-  m_PrefabInstance: {fileID: 1256902659}
-  m_PrefabAsset: {fileID: 0}
---- !u!111 &1618114750
-Animation:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1618114748}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Animation: {fileID: -1044026584348158295, guid: c0e5dc1cc9098434b8973555f9e71485, type: 3}
-  m_Animations:
-  - {fileID: -1044026584348158295, guid: c0e5dc1cc9098434b8973555f9e71485, type: 3}
-  m_WrapMode: 0
-  m_PlayAutomatically: 1
-  m_AnimatePhysics: 0
-  m_CullingType: 0
---- !u!1 &1637185576 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -4819223349682164798, guid: c0e5dc1cc9098434b8973555f9e71485, type: 3}
-  m_PrefabInstance: {fileID: 1256902659}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1963635232
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -556,7 +530,7 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: 03c388623a39b4144b222e1e768ac8e6, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: 509708f2935d9f443948214111c2c061, type: 2}
+      objectReference: {fileID: 2100000, guid: c065feb6247baae4a8ccd59252479290, type: 2}
     - target: {fileID: 919132149155446097, guid: 03c388623a39b4144b222e1e768ac8e6, type: 3}
       propertyPath: m_Name
       value: Smily

@@ -11,7 +11,12 @@ public class SolidWire : MonoBehaviour
 
     private int triIdxCount;
     private Mesh mesh;
-    private Material material;              // Reference to the SolidWire material.
+    private Material[] materials;           // Reference to the SolidWire material(s).
+
+    private static int maxVertCount = 0;    // All instances of the shader will set the size of the RWBuffer globally.
+                                            // I don't know how (or if you can) have different RWBuffer sizes for each instance of the material,
+                                            // so for now, they'll all take on the largest size.
+                                            // (Wasteful I know. I hope there's a way around this in the future).
 
     // Start is called before the first frame update
     void Start()
@@ -33,8 +38,6 @@ public class SolidWire : MonoBehaviour
             triVecs[i/3,2] = tris[i+2];
         }
         triIdxBuffer.SetData(triVecs);
-        material.SetBuffer("triIdxBuffer", triIdxBuffer);
-        material.SetInt("triIdxCount", triIdxCount);
 
         // triAdjBuffer
         // ============
@@ -65,16 +68,27 @@ public class SolidWire : MonoBehaviour
         }
 
         triAdjBuffer.SetData(triAdjs);
-        material.SetBuffer("triAdjBuffer", triAdjBuffer);
+        
 
         // vertsPosRWBuffer
         // ================
-        int vertCount = mesh.vertexCount * 4; // Weird bug: If mesh.vertexCount is used for the buffer, it won't be enough.
-                                              // Not sure how to get the actual number, so * 2 added as a quickfix for now.
+        // Probably bad implementation:
+        // I don't think it's possible to have the vertPosBuffer have a different size for each individual mesh.
+        // As such, if a mesh with 30 verts is created after one with 180, then the 180 vert mesh will have its buffer set to 30 (and won't draw every edge as a result)!
+        // My (hopefully temporary) solution is to just have all instances of the shader use the maximum buffer size required as a result.
+        if (mesh.vertexCount > maxVertCount) maxVertCount = mesh.vertexCount;
+        int vertCount = maxVertCount;
 
         int vertsPosStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4));
         vertsPosRWBuffer = new ComputeBuffer(vertCount, vertsPosStride, ComputeBufferType.Default);
-        material.SetBuffer("vertsPosBuffer", vertsPosRWBuffer);
+
+        foreach (var mat in materials)
+        {
+            mat.SetBuffer("triIdxBuffer", triIdxBuffer);
+            mat.SetInt("triIdxCount", triIdxCount);
+            mat.SetBuffer("triAdjBuffer", triAdjBuffer);
+            mat.SetBuffer("vertsPosBuffer", vertsPosRWBuffer);
+        }
     }
 
     /// <summary>
@@ -163,13 +177,13 @@ public class SolidWire : MonoBehaviour
         if (skinnedMeshRenderer)
         {
             mesh = skinnedMeshRenderer.sharedMesh;
-            material = skinnedMeshRenderer.material;
+            materials = skinnedMeshRenderer.materials;
             return;
         }
 
         // Non-skinned
         mesh = GetComponent<MeshFilter>().sharedMesh;
-        material = GetComponent<MeshRenderer>().material;
+        materials = GetComponent<MeshRenderer>().materials;
     }
 
     // Update is called once per frame
@@ -177,8 +191,10 @@ public class SolidWire : MonoBehaviour
     {
         // Clear the RWBuffer each frame.
         Graphics.ClearRandomWriteTargets();
-        material.SetPass(0);
-        material.SetBuffer("vertsPosRWBuffer", vertsPosRWBuffer);
+        foreach(var m in materials) { 
+            m.SetPass(1);
+            m.SetBuffer("vertsPosRWBuffer", vertsPosRWBuffer);
+        }
         Graphics.SetRandomWriteTarget(1, vertsPosRWBuffer, false);
     }
 
@@ -187,5 +203,9 @@ public class SolidWire : MonoBehaviour
         vertsPosRWBuffer.Release();
         triIdxBuffer.Release();
         triAdjBuffer.Release();
+
+        vertsPosRWBuffer.Dispose();
+        triIdxBuffer.Dispose();
+        triAdjBuffer.Dispose();
     }
 }

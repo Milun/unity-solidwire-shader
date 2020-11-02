@@ -6,16 +6,135 @@
         _WireStrength ("Wire strength", Range(0.1, 5.0)) = 1.5 
         _WireCornerSize("Wire corner size", RANGE(0, 1000)) = 800
         _WireCornerStrength("Wire corner strength", RANGE(0.0, 10.0)) = 1.5
-        _AlbedoColor("Albedo color", Color) = (0,0,0,1)
+        //_AlbedoColor("Albedo color", Color) = (0,0,0,1)
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" "IgnoreProjector" = "True" }
+        Tags { "RenderType"="Opaque" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
         LOD 200
         Cull Back
         //ZWrite Off
         //ZTest On
 
+        /**
+         * Unity Editor outline pass.
+         * This pass exists to add a basic outline to the mesh while in edit mode (so that the basic shape of the mesh is visible).
+         * It won't be drawn while the game is running.
+         */
+        Pass
+        {
+            Name "EditorOutline"
+
+            Cull Front
+            //ZWrite Off
+
+            CGPROGRAM
+            #include "UnityCG.cginc"
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma geometry geom
+
+            static const float PREVIEW_THICKNESS = 1.5;
+
+            struct appdata
+            {
+                float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
+            };
+
+            struct v2g
+            {
+                float4 pos : POSITION;
+                int isPreview : COLOR0;
+            };
+
+            struct g2f
+            {
+                float4 pos : SV_POSITION;
+            };
+
+            int triIdxCount;
+
+            v2g vert (appdata v)
+            {
+                v2g o;
+
+                // Get the normal clip pos.
+                o.pos = UnityObjectToClipPos(v.vertex);
+
+                // Not in editor mode; continue.
+                if (triIdxCount != 0) {
+                    o.isPreview = 0;
+                    return o;
+                }
+
+                // (Doubt this is the best way to determine this).
+                // The Unity assets preview is set to draw this material as a plane.
+                // Determine whether the shader is currently rendering that plane by checking if its vertices are at abs(0.5).
+                // NOTE: If there's a mesh with exactly these coordinates in the Scene view, it will also be affected by this in the editor.
+                //       (It will be rendered correctly when the game runs).
+                o.isPreview = (abs(v.vertex.x) == 0.5 && abs(v.vertex.y) == 0.5) ? 1 : 0;
+                
+                return o;
+            }
+
+            // For whatever reason, triangleadj works, while triangle doesn't.
+            [maxvertexcount(6)]
+            void geom(triangleadj v2g IN[6], inout TriangleStream<g2f> triangleStream)
+            {
+                g2f o = (g2f)0;
+
+                if (triIdxCount != 0) return; // Don't draw unless in edit mode.
+
+                // Check if this geom is being rendered inside of the Asset preview.
+                if (IN[0].isPreview != 1 || IN[1].isPreview != 1 || IN[2].isPreview != 1) {
+                   
+                    // This is a tri drawn inside the Scene view.
+                    o.pos = IN[0].pos;
+                    triangleStream.Append(o);
+
+                    o.pos = IN[1].pos;
+                    triangleStream.Append(o);
+
+                    o.pos = IN[2].pos;
+                    triangleStream.Append(o);
+                }
+                else {
+                    // This is a tri drawn inside the Asset preview. Render it differently.
+                    o.pos = IN[0].pos;
+                    o.pos.x *= -PREVIEW_THICKNESS;
+                    o.pos.y *= PREVIEW_THICKNESS;
+                    o.pos.w *= 1.01;
+                    triangleStream.Append(o);
+
+                    o.pos = IN[1].pos * 2.1;
+                    o.pos.x *= -PREVIEW_THICKNESS;
+                    o.pos.y *= PREVIEW_THICKNESS;
+                    o.pos.w *= 1.01;
+                    triangleStream.Append(o);
+
+                    o.pos = IN[2].pos * 2.1;
+                    o.pos.x *= -PREVIEW_THICKNESS;
+                    o.pos.y *= PREVIEW_THICKNESS;
+                    o.pos.w *= 1.01;
+                    triangleStream.Append(o);
+                }
+            }
+
+            fixed4 _WireColor;
+            float _WireStrength;
+            fixed4 frag(g2f IN) : SV_Target
+            {
+                return _WireColor * _WireStrength;
+            }
+            ENDCG
+        }
+
+        /**
+         * Body pass
+         * This pass draws the mesh in pure black with its vertices slighty contracted.
+         * The body is used to obscure edges that would be hidden behind the mesh normally.
+         */
         Pass
         {
             Name "Body"
@@ -36,7 +155,7 @@
             struct v2g
             {
                 float4 pos : POSITION;
-                int2 idxType : TEXCOORD0; // x = vert mesh index (ignored bu .shader. Used by .cs) | y = vert edge type (used by shader): -1 | 0 | 1 | 2
+                int2 idxType : COLOR0; // x = vert mesh index (ignored bu .shader. Used by .cs) | y = vert edge type (used by shader): -1 | 0 | 1 | 2
             };
 
             struct g2f
@@ -44,6 +163,7 @@
                 float4 pos : SV_POSITION;
             };
 
+            int triIdxCount;
             v2g vert (appdata v)
             {
                 v2g o;
@@ -67,8 +187,11 @@
                 // Create a vector between the two pos vectors...
                 float4 diff = o.pos - posExt;
 
+                float editorMulti = triIdxCount == 0 ? 4 : 1;
+
                 // ...and then make it consistant regardless of size.
-                o.pos -= normalize(diff) * 0.005;
+                o.pos -= normalize(diff) * 0.001 * editorMulti * o.pos.w;
+                //o.pos -= normalize(diff) * 0.005;
 
                 o.idxType = (int2)v.uv;
 
@@ -90,6 +213,8 @@
                 if (IN[1].idxType.y < 0) return;
                 if (IN[2].idxType.y < 0) return;
 
+                //if (IN[0].pos.x > 3) return;
+
                 // This is a real tri. Render it.
                 o.pos = IN[0].pos;
                 triangleStream.Append(o);
@@ -101,16 +226,21 @@
                 triangleStream.Append(o);
             }
 
-            fixed4 _AlbedoColor;
             fixed4 frag(g2f IN) : SV_Target
             {
-                return _AlbedoColor.rgba;
+                return fixed4(0,0,0,0);
             }
             ENDCG
         }
 
+        /**
+         * Wire pass
+         * Draws the wire edges of the mesh. See readme / Github repo for more information.
+         */
         Pass
         {
+            Name "Wire"
+
             CGPROGRAM
             #include "UnityCG.cginc"
             #pragma vertex vert
@@ -128,7 +258,7 @@
             struct v2g
             {
                 float4 pos : SV_POSITION;
-                int2 idxType : TEXCOORD0; // x = vert mesh index (ignored bu .shader. Used by .cs) | y = vert edge type (used by shader): -1 | 0 | 1 | 2
+                int2 idxType : COLOR0; // x = vert mesh index (ignored bu .shader. Used by .cs) | y = vert edge type (used by shader): -1 | 0 | 1 | 2
             };
 
             struct g2f
@@ -151,6 +281,8 @@
 
                 o.idxType.x = (int)v.vertexId; // Store the REAL index of the vert (the index set by the Blender export script is used by .cs only).
                 o.idxType.y = (int)v.uv.y;
+
+                // TBA: Set the color palette index value here somehow.
 
                 // Store the Screen position of the vert in the buffer.
                 vertsPosRWBuffer[v.vertexId] = o.pos;
@@ -256,6 +388,14 @@
                 float edge1Length = length(p2 - p1);
                 float edge2Length = length(p0 - p2);
                 float cornerSize = 1000 - _WireCornerSize;
+
+                // While in edit mode, all edges will be drawn.
+                /*if (triIdxCount == 0) {
+                    appendEdge(IN[1].pos, IN[2].pos, edge1Length, cornerSize, OUT);
+                    appendEdge(IN[2].pos, IN[0].pos, edge2Length, cornerSize, OUT);
+                    appendEdge(IN[0].pos, IN[1].pos, edge0Length, cornerSize, OUT);
+                    return;
+                }*/
 
                 // Loose edges
                 // ===========
