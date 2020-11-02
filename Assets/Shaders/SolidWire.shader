@@ -4,6 +4,7 @@
     {
         _WireColor ("Wire color", Color) = (1,1,1,1) 
         _WireStrength ("Wire strength", Range(0.1, 5.0)) = 1.5 
+        _WireThickness ("Wire thickness", Range(0.001, 0.01)) = 0.008 
         _WireCornerSize("Wire corner size", RANGE(0, 1000)) = 800
         _WireCornerStrength("Wire corner strength", RANGE(0.0, 10.0)) = 1.5
         //_AlbedoColor("Albedo color", Color) = (0,0,0,1)
@@ -11,7 +12,7 @@
     SubShader
     {
         //Tags { "RenderType"="Opaque" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
-        Tags { "Queue" = "Transparent" "RenderType" = "Transparent" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
+        Tags { "RenderType" = "Opaque" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
         Blend SrcAlpha OneMinusSrcAlpha
         LOD 200
         Cull Back
@@ -165,6 +166,7 @@
                 float4 pos : SV_POSITION;
             };
 
+            float _WireThickness;
             int triIdxCount;
             v2g vert (appdata v)
             {
@@ -190,6 +192,7 @@
                 float4 diff = o.pos - posExt;
 
                 float editorMulti = triIdxCount == 0 ? 2 : 1;
+                editorMulti *= _WireThickness * 1000;
 
                 // ...and then make it consistant regardless of size.
                 o.pos -= normalize(diff) * 0.001 * editorMulti * o.pos.w;
@@ -211,6 +214,7 @@
                 * "Placeholder" tris are added by the Blender script in order to allow loose edges in meshes to be easily imported by Unity.
                 * (By default, Unity removes the loose parts of a mesh).
                 */ 
+
                 if (IN[0].idxType.y < 0) return;
                 if (IN[1].idxType.y < 0) return;
                 if (IN[2].idxType.y < 0) return;
@@ -242,6 +246,7 @@
         Pass
         {
             Name "Wire"
+            Cull Off
 
             CGPROGRAM
             #include "UnityCG.cginc"
@@ -319,44 +324,120 @@
             }
 
             float _WireCornerSize;
+            float _WireThickness;
 
-            void appendEdge(float4 p1, float4 p2, float edgeLength, float cornerSize, inout LineStream<g2f> OUT)
+            void appendEdge(float4 p1, float4 p2, float edgeLength, float cornerSize, inout TriangleStream<g2f> OUT)
             {
                 g2f o = (g2f)0;
 
-                o.pos = p1;
-                o.dist.xy = float2(edgeLength, 0.0) * o.pos.w * cornerSize;
-                o.dist.z = 1.0 / o.pos.w;
+                float r = _ScreenParams.x / _ScreenParams.y; // Ensure that the line thickness is even regardless of screen size.
+                float2 r2 = float2(1, r)*2;
+
+                float2 n = normalize((p2.xy * p1.w) - (p1.xy * p2.w)); // Important to swap the .w multiplication (will think about why that works).
+                float2 t = float2(n.y, -n.x); //float2(-n.y, n.x); //n;//float2(n.y, -n.x));
+
+                // Almost there. Thickness just seems to fluctuate a bit. Look at the stickbug's leg.
+
+                // Somehow, the vertical line's correct t value is the normal?
+
+                // NEXT THING TO TAKE CARE OF: Shared colours (look at the rooster's neck).
+                // A good intensity for default is probably like 0.8 - 0.9.
+
+
+                
+
+                float4 a0 = p1;
+                float4 a1 = p1;
+
+                float2 b1 = (t) * p1.w * _WireThickness;
+                b1.y *= r;
+
+                a0.xy += -b1;
+                a1.xy += b1;
+                float3 d0;
+                d0.xy = float2(edgeLength, 0.0) * p1.w * cornerSize;
+                d0.z = 1.0 / p1.w;
+
+                float4 a2 = p2;
+                float4 a3 = p2;
+
+                float2 b2 = (t) * p2.w * _WireThickness;
+                b2.y *= r;
+                
+                a2.xy += -b2;
+                a3.xy += b2;
+                float3 d1;
+                d1.xy = float2(0.0, edgeLength) * p2.w * cornerSize;
+                d1.z = 1.0 / p2.w;
+
+                o.pos = a0;
+                o.dist = d0;
                 OUT.Append(o);
 
-                o.pos = p2;
-                o.dist.xy = float2(0.0, edgeLength) * o.pos.w * cornerSize;
-                o.dist.z = 1.0 / o.pos.w;
+                o.pos = a1;
+                o.dist = d0;
                 OUT.Append(o);
 
-                // New
+                o.pos = a2;
+                o.dist = d1;
+                OUT.Append(o);
+
+                o.pos = a3;
+                o.dist = d1;
+                OUT.Append(o);
+
                 OUT.RestartStrip();
 
-                float2 n = normalize(p2.xy - p1.xy);
-                float2 t = float2(n.y, -n.x);
-
-                o.pos = p1;
-                //o.pos.xy += float2(1,1) * 1 * o.pos.w;
-                //o.pos.xy += float2(1, 1 * _ScreenParams.x / _ScreenParams.y) * o.pos.w * 0.02;
-                //o.pos.xy += t * p1.w;
-                o.dist.xy = float2(edgeLength, 0.0) * o.pos.w * cornerSize;
-                o.dist.z = 1.0 / o.pos.w;
+                /*o.pos = a1;
+                o.dist = d0;
                 OUT.Append(o);
 
-                o.pos = p1;
-                //o.pos.xy += float2(1, 1) * 1 * o.pos.w;
-                //o.pos.xy += float2(1, 1 * _ScreenParams.x/_ScreenParams.y) * o.pos.w * 0.02;
-                o.pos.xy += t * p1.w * 0.02;
-                o.dist.xy = float2(0.0, edgeLength) * o.pos.w * cornerSize;
-                o.dist.z = 1.0 / o.pos.w;
+                o.pos = a2;
+                o.dist = d1;
                 OUT.Append(o);
 
-                OUT.RestartStrip();
+                o.pos = a3;
+                o.dist = d1;
+                OUT.Append(o);
+
+                OUT.RestartStrip();*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                // How to do shared colour sharp lines: Have Blender set the lower priority one to be "render on edge only (normal)", and set the other one to "render always (sharp)". That should take care of it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             }
 
             // FIXME: Each tri's culling is checked multiple times at the moment (redundant).
@@ -401,8 +482,8 @@
 
             // For some reason, the following only workds with Unity's unimplemented triangleadj.
             // I tried using triangle instead, and it gave different results.
-            [maxvertexcount(6)]
-            void geom(triangleadj v2g IN[6], inout LineStream<g2f> OUT)
+            [maxvertexcount(12)] // Important to accomodate for the maximum amount of lines being rendered with tristip (which is 4x3).
+            void geom(triangleadj v2g IN[6], inout TriangleStream<g2f> OUT)
             {
                 // Used to calculate corner highlights.
                 float2 p0 = IN[0].pos.xy / IN[0].pos.w;
@@ -459,11 +540,11 @@
                 float minDistanceToCorner = min(IN.dist[0], IN.dist[1]) * IN.dist[2];
                 
                 // Normal line color.
-                if (minDistanceToCorner > 0.9) {
+                //if (minDistanceToCorner > 0.9) {
                     half4 color = (half4)_WireColor * _WireStrength;
                     //color.a = 0.2;
                     return color;
-                }
+                //}
 
                 // Corner highlight color.
                 half4 cornerColor = (half4)_WireColor;

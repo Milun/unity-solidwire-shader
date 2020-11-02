@@ -74,11 +74,12 @@ Material:
     - _WireCornerSize: 0
     - _WireCornerStrength: 0.8
     - _WireHighlight: 3
-    - _WireStrength: 1
+    - _WireStrength: 0.85
+    - _WireThickness: 0.001
     - _ZWrite: 1
     m_Colors:
     - _AlbedoColor: {r: 0, g: 0, b: 0, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _WireColor: {r: 1, g: 1, b: 1, a: 1}
+    - _WireColor: {r: 0.41960785, g: 0.67294514, b: 0.83137256, a: 1}
   m_BuildTextureStacks: []
