@@ -189,7 +189,7 @@
                 // Create a vector between the two pos vectors...
                 float4 diff = o.pos - posExt;
 
-                float editorMulti = triIdxCount == 0 ? 4 : 1;
+                float editorMulti = triIdxCount == 0 ? 2 : 1;
 
                 // ...and then make it consistant regardless of size.
                 o.pos -= normalize(diff) * 0.001 * editorMulti * o.pos.w;
@@ -335,19 +335,26 @@
                 OUT.Append(o);
 
                 // New
-                /*OUT.RestartStrip();
+                OUT.RestartStrip();
+
+                float2 n = normalize(p2.xy - p1.xy);
+                float2 t = float2(n.y, -n.x);
 
                 o.pos = p1;
-                o.pos.xy += float2(1,1) * 0.002 * o.pos.w;
+                //o.pos.xy += float2(1,1) * 1 * o.pos.w;
+                //o.pos.xy += float2(1, 1 * _ScreenParams.x / _ScreenParams.y) * o.pos.w * 0.02;
+                //o.pos.xy += t * p1.w;
                 o.dist.xy = float2(edgeLength, 0.0) * o.pos.w * cornerSize;
                 o.dist.z = 1.0 / o.pos.w;
                 OUT.Append(o);
 
-                o.pos = p2;
-                o.pos.xy += float2(1, 1) * 0.002 * o.pos.w;
+                o.pos = p1;
+                //o.pos.xy += float2(1, 1) * 1 * o.pos.w;
+                //o.pos.xy += float2(1, 1 * _ScreenParams.x/_ScreenParams.y) * o.pos.w * 0.02;
+                o.pos.xy += t * p1.w * 0.02;
                 o.dist.xy = float2(0.0, edgeLength) * o.pos.w * cornerSize;
                 o.dist.z = 1.0 / o.pos.w;
-                OUT.Append(o);*/
+                OUT.Append(o);
 
                 OUT.RestartStrip();
             }
