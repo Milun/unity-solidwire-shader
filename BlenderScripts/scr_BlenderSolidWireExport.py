@@ -179,6 +179,11 @@ def processSelection():
         bpy.ops.object.mode_set(mode = 'EDIT')
         bm = bmesh.from_edit_mesh(mesh)
 
+        # Sort all mesh faces by material (this will make materials with a lower index take priority over materials with a higher index when rendering).
+        bpy.ops.mesh.select_all(action='SELECT')  
+        bpy.ops.mesh.sort_elements(type="MATERIAL", elements={'FACE'}, reverse=False)
+        bpy.ops.mesh.select_all(action='DESELECT')
+
         # Store an array of all edges
         edges = [e for e in bm.edges]
 
