@@ -145,6 +145,7 @@ public class SolidWire : MonoBehaviour
         }
 
         int[] output = new int[] { t0, t1, t2 };
+        //Debug.Log(output[0] + ", " + output[1] + ", " + output[2]);
         //if (output[0] > 128) output[0] = 128;
         //if (output[1] > 128) output[1] = 128;
         //if (output[2] > 128) output[2] = 128;
