@@ -199,7 +199,7 @@ public class SolidWire : MonoBehaviour
     void Update()
     {
         // Clear the RWBuffer each frame.
-        Graphics.ClearRandomWriteTargets();
+        //Graphics.ClearRandomWriteTargets();
         foreach(var m in materials) { 
             m.SetPass(2);
             m.SetBuffer("vertsPosRWBuffer", vertsPosRWBuffer);

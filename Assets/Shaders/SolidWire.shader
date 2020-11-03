@@ -147,12 +147,14 @@
             #pragma vertex vert
             #pragma fragment frag alpha
             #pragma geometry geom
+            #pragma target 5.0 // RWStructuredBuffer needs this.
 
             struct appdata
             {
                 float4 vertex : POSITION;
                 float4 normal : NORMAL;
                 float2 uv : TEXCOORD0;
+                uint vertexId : SV_VertexID;
             };
 
             struct v2g
@@ -165,6 +167,9 @@
             {
                 float4 pos : SV_POSITION;
             };
+
+            // Store the calculated clip pos of all vertices in an array for later use.
+            uniform RWStructuredBuffer<float4> vertsPosRWBuffer : register(u1);
 
             float _WireThickness;
             int triIdxCount;
@@ -199,6 +204,10 @@
                 //o.pos -= normalize(diff) * 0.005;
 
                 o.idxType = (int2)v.uv;
+
+                // TEST
+                // Store the Screen position of the vert in the buffer.
+                vertsPosRWBuffer[v.vertexId] = o.pos;
 
                 return o;
             }
@@ -292,7 +301,7 @@
                 // TBA: Set the color palette index value here somehow.
 
                 // Store the Screen position of the vert in the buffer.
-                vertsPosRWBuffer[v.vertexId] = o.pos;
+                //vertsPosRWBuffer[v.vertexId] = o.pos;
 
                 return o;
             }
@@ -523,7 +532,7 @@
                 //triIdx -= 1;
                 int3 adj = triAdjBuffer[triIdx]; // Indexes of the 3 adjacent tris to this one (or -1 if there's no tri on a specific side).
 
-                bool test = false;
+                bool test = true;
 
                 // edge0
                 if (isEdgeDrawn(adj.x, IN[1].idxType.y)){
