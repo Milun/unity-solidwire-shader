@@ -267,6 +267,9 @@ def processSelection():
         # For those tris that do, mark two of their edges as "fake" (the SolidWire shader in Unity will never draw them).
         fakeEdges = []
         for f in bm.faces:
+
+            #print(f.material_index)
+
             # If two verts match, then it's a fake face.
             if f.edges[0].verts[0].co == f.edges[0].verts[1].co:
                 fakeEdges.append(f.edges[0].index)
@@ -281,6 +284,9 @@ def processSelection():
                 fakeEdges.append(f.edges[0].index)
 
         # Store all relevant edge data to the SolidWire export.
+        # - Store the indexes of the two verts the edge has
+        # - Store the type of the edge (based on if it's marked normal/sharp/seam in Blender)
+        # - Store the materials that the face(s) the edge belongs to have
         edgeData = []
         for e in bm.edges:
             v = []
@@ -295,9 +301,17 @@ def processSelection():
             if e.index in fakeEdges:
                 t = LNEVER
 
+            # Find the 1|2 faces that this edge belongs to, and record the lowest material index of them (it will take priority).
+            matIndex = 99999
+            for f in bm.faces:
+                if e.verts[0] in f.verts and e.verts[1] in f.verts:
+                    if f.material_index < matIndex:
+                        matIndex = f.material_index
+
             el = type('edgedata', (object,), {
                     'verts':v,
-                    'type':t
+                    'type':t,
+                    'mat': matIndex
                 })()
 
             edgeData.append(el)
@@ -341,19 +355,20 @@ def processSelection():
             i2 = face.loop_indices[1 if not f2 else 2]
             i3 = face.loop_indices[2 if not f3 else 0]
 
-            # Get the material assigned to this tri, and add its index to the u.y
-            matIndex = face.material_index / 100
-            matIndex = 0
-            #face.material_index = 0 # Don't export the different materials.
+            # If this face's material's index isn't the highest priority for this edge, then swap an LALWAYS to a LNORMAL, 
+            matIndex = face.material_index
+            if matIndex != edge1.mat and edge1.type == LALWAYS: edge1.type = LNORMAL
+            if matIndex != edge2.mat and edge2.type == LALWAYS: edge2.type = LNORMAL
+            if matIndex != edge3.mat and edge3.type == LALWAYS: edge3.type = LNORMAL
 
             # Assign edgeData here.
             mesh.uv_layers.active.data[face.loop_indices[0]].uv.x = face.vertices[0]
             mesh.uv_layers.active.data[face.loop_indices[1]].uv.x = face.vertices[1]
             mesh.uv_layers.active.data[face.loop_indices[2]].uv.x = face.vertices[2]
 
-            mesh.uv_layers.active.data[i1].uv.y = edge1.type + matIndex
-            mesh.uv_layers.active.data[i2].uv.y = edge2.type + matIndex
-            mesh.uv_layers.active.data[i3].uv.y = edge3.type + matIndex
+            mesh.uv_layers.active.data[i1].uv.y = edge1.type
+            mesh.uv_layers.active.data[i2].uv.y = edge2.type
+            mesh.uv_layers.active.data[i3].uv.y = edge3.type
     
     print("--------------------------------------------------")
 
