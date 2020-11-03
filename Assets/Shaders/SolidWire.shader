@@ -350,6 +350,9 @@
                 float4 a0 = p1;
                 float4 a1 = p1;
 
+                // t + n won't work here (because I minus it).
+                // But it's on the right track (it's overlapping them properly and making them brighter).
+
                 float2 b1 = (t) * p1.w * _WireThickness;
                 b1.y *= r;
 
@@ -425,6 +428,8 @@
 
                 // How to do shared colour sharp lines: Have Blender set the lower priority one to be "render on edge only (normal)", and set the other one to "render always (sharp)". That should take care of it.
 
+                // The sharp lines are doubly intense due to the same material being used and the edge being drawn twice.
+
 
 
 
@@ -456,9 +461,6 @@
             {
                 uint3 t = triIdxBuffer[triIdx];
 
-                //if (t.x >= 256 || t.y >= 256 || t.z >= 256) return true;
-                //return false;
-
                 float2 p0 = vertsPosRWBuffer[t.x].xy / vertsPosRWBuffer[t.x].w;
                 float2 p1 = vertsPosRWBuffer[t.y].xy / vertsPosRWBuffer[t.y].w;
                 float2 p2 = vertsPosRWBuffer[t.z].xy / vertsPosRWBuffer[t.z].w;
@@ -469,13 +471,13 @@
             bool isEdgeDrawn(int adjTriIdx, uint edgeType){
 
                 // If the type value is <= 0, then never draw the edge.
-                //if (edgeType <= 0) return false;
+                if (edgeType <= 0) return false;
 
                 // If the type value is 2, then always draw the edge.
-                //if (edgeType == 2) return true;
+                if (edgeType == 2) return true;
 
                 // If there's no adjacent face (adjTriIdx == -1), or if the adjacent face is showing its backface, then draw the edge.
-                if (/*adjTriIdx < 0 || */isTriCulledByIdx(adjTriIdx)) return true;
+                if (adjTriIdx < 0 || isTriCulledByIdx(adjTriIdx)) return true;
 
                 // Otherwise, don't draw it.
                 return false;

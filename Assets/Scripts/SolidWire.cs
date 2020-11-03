@@ -26,6 +26,13 @@ public class SolidWire : MonoBehaviour
         uint[] tris = (uint[])(object)mesh.triangles;
         triIdxCount = tris.Length;
 
+        Debug.Log(mesh.subMeshCount);
+        for (var i = 0; i < mesh.subMeshCount; i++) { 
+            Debug.Log("v: " + mesh.GetSubMesh(i).indexStart);
+        }
+
+        //Debug.Log("LENGTH: " + triIdxCount);
+
         // triIdxBuffer
         // ============
         // Store the indexes of verts for all tris.
