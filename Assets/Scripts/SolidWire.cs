@@ -26,10 +26,10 @@ public class SolidWire : MonoBehaviour
         uint[] tris = (uint[])(object)mesh.triangles;
         triIdxCount = tris.Length;
 
-        Debug.Log(mesh.subMeshCount);
+        /*Debug.Log(mesh.subMeshCount);
         for (var i = 0; i < mesh.subMeshCount; i++) { 
             Debug.Log("v: " + mesh.GetSubMesh(i).indexStart);
-        }
+        }*/
 
         //Debug.Log("LENGTH: " + triIdxCount);
 
@@ -152,6 +152,7 @@ public class SolidWire : MonoBehaviour
         }
 
         int[] output = new int[] { t0, t1, t2 };
+        //if (t0 > triIdxCount) Debug.Log("UH OH");
         //Debug.Log(output[0] + ", " + output[1] + ", " + output[2]);
         //if (output[0] > 128) output[0] = 128;
         //if (output[1] > 128) output[1] = 128;
@@ -200,7 +201,7 @@ public class SolidWire : MonoBehaviour
         // Clear the RWBuffer each frame.
         Graphics.ClearRandomWriteTargets();
         foreach(var m in materials) { 
-            m.SetPass(1);
+            m.SetPass(2);
             m.SetBuffer("vertsPosRWBuffer", vertsPosRWBuffer);
         }
         Graphics.SetRandomWriteTarget(1, vertsPosRWBuffer, false);

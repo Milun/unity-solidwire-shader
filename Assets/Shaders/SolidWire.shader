@@ -278,7 +278,7 @@
             /// ====
 
             // Store the calculated clip pos of all vertices in an array for later use.
-            RWStructuredBuffer<float4> vertsPosRWBuffer : register(u1);
+            uniform RWStructuredBuffer<float4> vertsPosRWBuffer : register(u1);
             
             v2g vert(appdata v)
             {
@@ -485,7 +485,8 @@
 
             // For some reason, the following only workds with Unity's unimplemented triangleadj.
             // I tried using triangle instead, and it gave different results.
-            [maxvertexcount(12)] // Important to accomodate for the maximum amount of lines being rendered with tristip (which is 4x3).
+            //[maxvertexcount(12)] // Important to accomodate for the maximum amount of lines being rendered with tristip (which is 4x3).
+            [maxvertexcount(24)] // Important to accomodate for the maximum amount of lines being rendered with tristip (which is 4x3).
             void geom(triangleadj v2g IN[6], inout TriangleStream<g2f> OUT)
             {
                 // Used to calculate corner highlights.
@@ -519,17 +520,42 @@
                 // Main edges
                 // ==========
                 uint triIdx = getTriIdx(IN[0].idxType.x, IN[1].idxType.x, IN[2].idxType.x); // Index of this tri.
+                //triIdx -= 1;
                 int3 adj = triAdjBuffer[triIdx]; // Indexes of the 3 adjacent tris to this one (or -1 if there's no tri on a specific side).
+
+                bool test = false;
 
                 // edge0
                 if (isEdgeDrawn(adj.x, IN[1].idxType.y)){
                     appendEdge(IN[0].pos, IN[1].pos, edge0Length, cornerSize, OUT);
                 }
+
                 if (isEdgeDrawn(adj.y, IN[2].idxType.y)){
                     appendEdge(IN[1].pos, IN[2].pos, edge1Length, cornerSize, OUT);
                 }
+
                 if (isEdgeDrawn(adj.z, IN[0].idxType.y)){
-                    appendEdge(IN[2].pos, IN[0].pos, edge2Length, cornerSize, OUT);
+                    appendEdge(IN[2].pos, IN[0].pos, edge2Length, cornerSize, OUT);                    
+                }
+
+                if (!test) return;
+                uint3 t = triIdxBuffer[adj.x];
+                if (adj.x >= 0) {
+                    appendEdge(vertsPosRWBuffer[t.x], vertsPosRWBuffer[t.y], edge0Length, cornerSize, OUT);
+                    appendEdge(vertsPosRWBuffer[t.y], vertsPosRWBuffer[t.z], edge0Length, cornerSize, OUT);
+                    appendEdge(vertsPosRWBuffer[t.z], vertsPosRWBuffer[t.x], edge0Length, cornerSize, OUT);
+                }
+                t = triIdxBuffer[adj.y];
+                if (adj.y >= 0) {
+                    appendEdge(vertsPosRWBuffer[t.x], vertsPosRWBuffer[t.y], edge1Length, cornerSize, OUT);
+                    appendEdge(vertsPosRWBuffer[t.y], vertsPosRWBuffer[t.z], edge1Length, cornerSize, OUT);
+                    appendEdge(vertsPosRWBuffer[t.z], vertsPosRWBuffer[t.x], edge1Length, cornerSize, OUT);
+                }
+                t = triIdxBuffer[adj.z];
+                if (adj.z >= 0) {
+                appendEdge(vertsPosRWBuffer[t.x], vertsPosRWBuffer[t.y], edge2Length, cornerSize, OUT);
+                appendEdge(vertsPosRWBuffer[t.y], vertsPosRWBuffer[t.z], edge2Length, cornerSize, OUT);
+                appendEdge(vertsPosRWBuffer[t.z], vertsPosRWBuffer[t.x], edge2Length, cornerSize, OUT);
                 }
             }
 
