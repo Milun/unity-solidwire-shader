@@ -341,6 +341,18 @@ def processSelection():
         # - If the edge from v0 to v1 is sharp, then v0 will have the sharp UVs set.
         # - If the edge from v1 to v2 is sharp, then v1 will have the sharp UVs set.
         # - etc.
+        # - LALWAYS edges with two faces need to have one marked as LNORMAL, and one as LALWAYS (to prevent double rendering).
+        sharpEdges = [] # The second time the same sharp edge is retrieved from getEdgeData, it will be marked as smooth instead.
+        def processSharpEdge(edge, matIndex):
+            if edge.type == LALWAYS:
+                if matIndex != edge.mat:
+                    edge.type = LNORMAL
+                else:
+                    if edge in sharpEdges:
+                        edge.type = LNORMAL
+                    else:
+                        sharpEdges.append(edge)
+
         for face in mesh.polygons:
 
             edge1, f1 = getEdgeData(face.vertices[0], face.vertices[1])
@@ -357,9 +369,9 @@ def processSelection():
 
             # If this face's material's index isn't the highest priority for this edge, then swap an LALWAYS to a LNORMAL, 
             matIndex = face.material_index
-            if matIndex != edge1.mat and edge1.type == LALWAYS: edge1.type = LNORMAL
-            if matIndex != edge2.mat and edge2.type == LALWAYS: edge2.type = LNORMAL
-            if matIndex != edge3.mat and edge3.type == LALWAYS: edge3.type = LNORMAL
+            processSharpEdge(edge1, matIndex)
+            processSharpEdge(edge2, matIndex)
+            processSharpEdge(edge3, matIndex)
 
             # Assign edgeData here.
             mesh.uv_layers.active.data[face.loop_indices[0]].uv.x = face.vertices[0]
