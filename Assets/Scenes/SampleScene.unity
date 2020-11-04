@@ -233,6 +233,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1eb07ca90327754995634afc7e85a40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ComputeShader: {fileID: 0}
 --- !u!1001 &620835057
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -327,6 +328,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1eb07ca90327754995634afc7e85a40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ComputeShader: {fileID: 0}
 --- !u!1 &679674015 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -398321088993075008, guid: c0e5dc1cc9098434b8973555f9e71485, type: 3}
@@ -630,6 +632,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1eb07ca90327754995634afc7e85a40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ComputeShader: {fileID: 0}
 --- !u!114 &1001884555
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -642,6 +645,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1eb07ca90327754995634afc7e85a40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ComputeShader: {fileID: 0}
 --- !u!114 &1001884556
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -654,6 +658,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1eb07ca90327754995634afc7e85a40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ComputeShader: {fileID: 0}
 --- !u!1001 &1102898381
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -764,6 +769,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1eb07ca90327754995634afc7e85a40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ComputeShader: {fileID: 0}
 --- !u!1001 &1116046219
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -870,6 +876,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1eb07ca90327754995634afc7e85a40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ComputeShader: {fileID: 0}
 --- !u!1001 &1256902659
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -988,6 +995,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1eb07ca90327754995634afc7e85a40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ComputeShader: {fileID: 0}
 --- !u!1001 &1963635232
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1118,3 +1126,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1eb07ca90327754995634afc7e85a40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ComputeShader: {fileID: 7200000, guid: e5b0444f6aae90f40937c5d1f282cc73, type: 3}

@@ -495,7 +495,7 @@
             // For some reason, the following only workds with Unity's unimplemented triangleadj.
             // I tried using triangle instead, and it gave different results.
             //[maxvertexcount(12)] // Important to accomodate for the maximum amount of lines being rendered with tristip (which is 4x3).
-            [maxvertexcount(24)] // Important to accomodate for the maximum amount of lines being rendered with tristip (which is 4x3).
+            [maxvertexcount(48)] // Important to accomodate for the maximum amount of lines being rendered with tristip (which is 4x3).
             void geom(triangleadj v2g IN[6], inout TriangleStream<g2f> OUT)
             {
                 // Used to calculate corner highlights.
