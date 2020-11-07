@@ -5,8 +5,6 @@ using UnityEngine;
 
 public class SolidWire : MonoBehaviour
 {
-    public ComputeShader ComputeShader;
-
     private ComputeBuffer vertsPosRWBuffer; // RWBuffer. Will store the calculated clip pos of all vertices in an array for later use (values are set by the shader).
     private ComputeBuffer triIdxBuffer;     // Store each tri's 3 vert indexes (mesh.triangles) as uint3s.
     private ComputeBuffer triAdjBuffer;     // Storing each tri's 3 adjacent tri indexes (or -1 if there's no adjacent tri on an edge).
@@ -19,6 +17,8 @@ public class SolidWire : MonoBehaviour
                                             // I don't know how (or if you can) have different RWBuffer sizes for each instance of the material,
                                             // so for now, they'll all take on the largest size.
                                             // (Wasteful I know. I hope there's a way around this in the future).
+
+    public RenderTexture result;
 
     // Start is called before the first frame update
     void Start()
@@ -200,7 +200,6 @@ public class SolidWire : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-
         // Clear the RWBuffer each frame.
         //Graphics.ClearRandomWriteTargets();
         foreach(var m in materials) { 

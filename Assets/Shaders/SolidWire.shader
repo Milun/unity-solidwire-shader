@@ -2,7 +2,10 @@
 {
     Properties
     {
-        _WireColor ("Wire color", Color) = (1,1,1,1) 
+        _WireColor0 ("Wire color 0", Color) = (1,1,1,1) 
+        _WireColor1 ("Wire color 1", Color) = (1,1,1,1) 
+        _WireColor2 ("Wire color 2", Color) = (1,1,1,1) 
+
         _WireStrength ("Wire strength", Range(0.1, 5.0)) = 1.5 
         _WireThickness ("Wire thickness", Range(0.001, 0.01)) = 0.008 
         _WireCornerSize("Wire corner size", RANGE(0, 1000)) = 800
@@ -12,7 +15,7 @@
     SubShader
     {
         //Tags { "RenderType"="Opaque" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
-        Tags { "RenderType" = "Opaque" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
+        Tags { "RenderType" = "Transparent" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
         Blend SrcAlpha OneMinusSrcAlpha
         LOD 200
         Cull Back
@@ -124,11 +127,11 @@
                 }
             }
 
-            fixed4 _WireColor;
+            fixed4 _WireColor0;
             float _WireStrength;
             fixed4 frag(g2f IN) : SV_Target
             {
-                return _WireColor * _WireStrength;
+                return _WireColor0 * _WireStrength;
             }
             ENDCG
         }
@@ -269,17 +272,20 @@
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
                 uint vertexId : SV_VertexID;
+                float4 color: COLOR0;
             };
 
             struct v2g
             {
                 float4 pos : SV_POSITION;
                 int2 idxType : COLOR0; // x = vert mesh index (ignored bu .shader. Used by .cs) | y = vert edge type (used by shader): -1 | 0 | 1 | 2
+                int colorIdx : COLOR1;
             };
 
             struct g2f
             {
                 float4 pos : SV_POSITION;
+                float4 color: COLOR0;
                 float3 dist : TEXCOORD0; // Used to calculate corner highlights.
             };
 
@@ -297,6 +303,8 @@
 
                 o.idxType.x = (int)v.vertexId; // Store the REAL index of the vert (the index set by the Blender export script is used by .cs only).
                 o.idxType.y = (int)v.uv.y;
+
+                o.colorIdx = (int)(v.color.r * 10);
 
                 // TBA: Set the color palette index value here somehow.
 
@@ -335,7 +343,7 @@
             float _WireCornerSize;
             float _WireThickness;
 
-            void appendEdge(float4 p1, float4 p2, float edgeLength, float cornerSize, inout TriangleStream<g2f> OUT)
+            void appendEdge(float4 p1, float4 p2, float4 color, float edgeLength, float cornerSize, inout TriangleStream<g2f> OUT)
             {
                 g2f o = (g2f)0;
 
@@ -363,10 +371,13 @@
                 // But it's on the right track (it's overlapping them properly and making them brighter).
 
                 float2 b1 = (t) * p1.w * _WireThickness;
+                float2 c1 = (n) * p1.w * _WireThickness;
+                c1 = float2(0, 0);
                 b1.y *= r;
+                c1.y *= r;
 
-                a0.xy += -b1;
-                a1.xy += b1;
+                a0.xy += -b1 - c1;
+                a1.xy += b1 - c1;
                 float3 d0;
                 d0.xy = float2(edgeLength, 0.0) * p1.w * cornerSize;
                 d0.z = 1.0 / p1.w;
@@ -375,28 +386,35 @@
                 float4 a3 = p2;
 
                 float2 b2 = (t) * p2.w * _WireThickness;
+                float2 c2 = (n) * p2.w * _WireThickness;
+                c2 = float2(0, 0);
                 b2.y *= r;
+                c2.y *= r;
                 
-                a2.xy += -b2;
-                a3.xy += b2;
+                a2.xy += -b2 + c2;
+                a3.xy += b2 + c2;
                 float3 d1;
                 d1.xy = float2(0.0, edgeLength) * p2.w * cornerSize;
                 d1.z = 1.0 / p2.w;
 
                 o.pos = a0;
                 o.dist = d0;
+                o.color = color;
                 OUT.Append(o);
 
                 o.pos = a1;
                 o.dist = d0;
+                o.color = color;
                 OUT.Append(o);
 
                 o.pos = a2;
                 o.dist = d1;
+                o.color = color;
                 OUT.Append(o);
 
                 o.pos = a3;
                 o.dist = d1;
+                o.color = color;
                 OUT.Append(o);
 
                 OUT.RestartStrip();
@@ -494,8 +512,10 @@
 
             // For some reason, the following only workds with Unity's unimplemented triangleadj.
             // I tried using triangle instead, and it gave different results.
-            //[maxvertexcount(12)] // Important to accomodate for the maximum amount of lines being rendered with tristip (which is 4x3).
-            [maxvertexcount(48)] // Important to accomodate for the maximum amount of lines being rendered with tristip (which is 4x3).
+            fixed4 _WireColor0;
+            fixed4 _WireColor1;
+            fixed4 _WireColor2;
+            [maxvertexcount(12)] // Important to accomodate for the maximum amount of lines being rendered with tristip (which is 4x3).
             void geom(triangleadj v2g IN[6], inout TriangleStream<g2f> OUT)
             {
                 // Used to calculate corner highlights.
@@ -507,18 +527,23 @@
                 float edge2Length = length(p0 - p2);
                 float cornerSize = 1000 - _WireCornerSize;
 
+                float4 color;
+                color = _WireColor0;
+                if (IN[0].colorIdx == 1) color = _WireColor1;
+                if (IN[0].colorIdx == 2) color = _WireColor2;
+
                 // Loose edges
                 // ===========
                 if (IN[0].idxType.y < 0){
-                    appendEdge(IN[1].pos, IN[2].pos, edge1Length, cornerSize, OUT);
+                    appendEdge(IN[1].pos, IN[2].pos, color, edge1Length, cornerSize, OUT);
                     return;
                 }
                 if (IN[1].idxType.y < 0){
-                    appendEdge(IN[2].pos, IN[0].pos, edge2Length, cornerSize, OUT);
+                    appendEdge(IN[2].pos, IN[0].pos, color, edge2Length, cornerSize, OUT);
                     return;
                 }
                 if (IN[2].idxType.y < 0){
-                    appendEdge(IN[0].pos, IN[1].pos, edge0Length, cornerSize, OUT);
+                    appendEdge(IN[0].pos, IN[1].pos, color, edge0Length, cornerSize, OUT);
                     return;
                 }
 
@@ -532,45 +557,24 @@
                 //triIdx -= 1;
                 int3 adj = triAdjBuffer[triIdx]; // Indexes of the 3 adjacent tris to this one (or -1 if there's no tri on a specific side).
 
-                bool test = true;
+                //bool test = false;
 
                 // edge0
                 if (isEdgeDrawn(adj.x, IN[1].idxType.y)){
-                    appendEdge(IN[0].pos, IN[1].pos, edge0Length, cornerSize, OUT);
+                    appendEdge(IN[0].pos, IN[1].pos, color, edge0Length, cornerSize, OUT);
                 }
 
                 if (isEdgeDrawn(adj.y, IN[2].idxType.y)){
-                    appendEdge(IN[1].pos, IN[2].pos, edge1Length, cornerSize, OUT);
+                    appendEdge(IN[1].pos, IN[2].pos, color, edge1Length, cornerSize, OUT);
                 }
 
                 if (isEdgeDrawn(adj.z, IN[0].idxType.y)){
-                    appendEdge(IN[2].pos, IN[0].pos, edge2Length, cornerSize, OUT);                    
-                }
-
-                if (!test) return;
-                uint3 t = triIdxBuffer[adj.x];
-                if (adj.x >= 0) {
-                    appendEdge(vertsPosRWBuffer[t.x], vertsPosRWBuffer[t.y], edge0Length, cornerSize, OUT);
-                    appendEdge(vertsPosRWBuffer[t.y], vertsPosRWBuffer[t.z], edge0Length, cornerSize, OUT);
-                    appendEdge(vertsPosRWBuffer[t.z], vertsPosRWBuffer[t.x], edge0Length, cornerSize, OUT);
-                }
-                t = triIdxBuffer[adj.y];
-                if (adj.y >= 0) {
-                    appendEdge(vertsPosRWBuffer[t.x], vertsPosRWBuffer[t.y], edge1Length, cornerSize, OUT);
-                    appendEdge(vertsPosRWBuffer[t.y], vertsPosRWBuffer[t.z], edge1Length, cornerSize, OUT);
-                    appendEdge(vertsPosRWBuffer[t.z], vertsPosRWBuffer[t.x], edge1Length, cornerSize, OUT);
-                }
-                t = triIdxBuffer[adj.z];
-                if (adj.z >= 0) {
-                appendEdge(vertsPosRWBuffer[t.x], vertsPosRWBuffer[t.y], edge2Length, cornerSize, OUT);
-                appendEdge(vertsPosRWBuffer[t.y], vertsPosRWBuffer[t.z], edge2Length, cornerSize, OUT);
-                appendEdge(vertsPosRWBuffer[t.z], vertsPosRWBuffer[t.x], edge2Length, cornerSize, OUT);
+                    appendEdge(IN[2].pos, IN[0].pos, color, edge2Length, cornerSize, OUT);
                 }
             }
 
             /// Frag
             /// ====
-            fixed4 _WireColor;
             float _WireStrength;
             float _WireCornerStrength;
             fixed4 frag(g2f IN) : SV_Target
@@ -578,14 +582,14 @@
                 float minDistanceToCorner = min(IN.dist[0], IN.dist[1]) * IN.dist[2];
                 
                 // Normal line color.
-                //if (minDistanceToCorner > 0.9) {
-                    half4 color = (half4)_WireColor * _WireStrength;
+                if (minDistanceToCorner > 0.9) {
+                    half4 color = (half4)IN.color * _WireStrength;
                     //color.a = 0.2;
                     return color;
-                //}
+                }
 
                 // Corner highlight color.
-                half4 cornerColor = (half4)_WireColor;
+                half4 cornerColor = (half4)IN.color;
                 cornerColor.xyz += half3(0.2,0.2,0.2); // Corners are slightly lighter.
                 //cornerColor.a = 0.2;
 

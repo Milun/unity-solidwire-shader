@@ -73,11 +73,14 @@ Material:
     - _UVSec: 0
     - _WireCornerSize: 0
     - _WireCornerStrength: 0.8
-    - _WireStrength: 1
-    - _WireThickness: 0.001
+    - _WireStrength: 0.5
+    - _WireThickness: 0.003
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _WireColor: {r: 1, g: 0, b: 0, a: 1}
+    - _WireColor0: {r: 1, g: 0, b: 0, a: 1}
+    - _WireColor1: {r: 0.057271298, g: 0.9339623, b: 0.07776544, a: 1}
+    - _WireColor2: {r: 1, g: 0.98480475, b: 0, a: 1}
   m_BuildTextureStacks: []

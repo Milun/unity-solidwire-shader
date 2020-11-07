@@ -181,7 +181,7 @@ def processSelection():
 
         # Sort all mesh faces by material (this will make materials with a lower index take priority over materials with a higher index when rendering).
         bpy.ops.mesh.select_all(action='SELECT')  
-        bpy.ops.mesh.sort_elements(type="MATERIAL", elements={'FACE'}, reverse=True)
+        bpy.ops.mesh.sort_elements(type="MATERIAL", elements={'FACE'}, reverse=False)
         bpy.ops.mesh.select_all(action='DESELECT')
 
         # Store an array of all edges
@@ -353,6 +353,10 @@ def processSelection():
                     else:
                         sharpEdges.append(edge)
 
+        # Materials are converted to vertex colours.
+        if not mesh.vertex_colors:
+            mesh.vertex_colors.new()
+
         for face in mesh.polygons:
 
             edge1, f1 = getEdgeData(face.vertices[0], face.vertices[1])
@@ -373,6 +377,13 @@ def processSelection():
             processSharpEdge(edge2, matIndex)
             processSharpEdge(edge3, matIndex)
 
+            # If multiple materials are used, then the mesh will be rendered with multiple submeshes.
+            # Unfortunately, the Unity SolidWire shader breaks if multiple submeshes are used at this time, so instead we'll convert the materials to vertex colors instead.
+            mesh.vertex_colors.active.data[face.loop_indices[0]].color = (face.material_index/10, 0, 0)
+            mesh.vertex_colors.active.data[face.loop_indices[1]].color = (face.material_index/10, 0, 0)
+            mesh.vertex_colors.active.data[face.loop_indices[2]].color = (face.material_index/10, 0, 0)
+            #face.material_index = 0
+
             # Assign edgeData here.
             mesh.uv_layers.active.data[face.loop_indices[0]].uv.x = face.vertices[0]
             mesh.uv_layers.active.data[face.loop_indices[1]].uv.x = face.vertices[1]
@@ -381,7 +392,10 @@ def processSelection():
             mesh.uv_layers.active.data[i1].uv.y = edge1.type
             mesh.uv_layers.active.data[i2].uv.y = edge2.type
             mesh.uv_layers.active.data[i3].uv.y = edge3.type
-    
+
+    # Remove all materials.
+    objCur.data.materials.clear()
+
     print("--------------------------------------------------")
 
     # Deselect all objects.
