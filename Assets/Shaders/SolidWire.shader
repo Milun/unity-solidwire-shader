@@ -376,8 +376,13 @@
                 b1.y *= r;
                 c1.y *= r;
 
-                a0.xy += -b1 - c1;
-                a1.xy += b1 - c1;
+                float2 t1 = (-t - n*3) * p1.w * _WireThickness;
+                float2 t2 = (t - n*3) * p1.w * _WireThickness;
+                t1.y *= r;
+                t2.y *= r;
+                a0.xy += t1;
+                a1.xy += t2;
+
                 float3 d0;
                 d0.xy = float2(edgeLength, 0.0) * p1.w * cornerSize;
                 d0.z = 1.0 / p1.w;
@@ -391,8 +396,14 @@
                 b2.y *= r;
                 c2.y *= r;
                 
-                a2.xy += -b2 + c2;
-                a3.xy += b2 + c2;
+                float2 t3 = (-t + n*3) * p2.w * _WireThickness;
+                float2 t4 = (t + n*3) * p2.w * _WireThickness;
+                t3.y *= r;
+                t4.y *= r;
+                a2.xy += t3;
+                a3.xy += t4;
+
+
                 float3 d1;
                 d1.xy = float2(0.0, edgeLength) * p2.w * cornerSize;
                 d1.z = 1.0 / p2.w;
