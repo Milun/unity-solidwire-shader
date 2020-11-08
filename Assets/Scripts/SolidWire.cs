@@ -18,11 +18,14 @@ public class SolidWire : MonoBehaviour
                                             // so for now, they'll all take on the largest size.
                                             // (Wasteful I know. I hope there's a way around this in the future).
 
-    public RenderTexture result;
-
     // Start is called before the first frame update
     void Start()
     {
+        Debug.Log("After cleaning up, add \"fog\" to the thing, where if an object's center is beyond a certain distance from the camera, it should fade out?");
+        Debug.Log("Will need some way to not use that in the map screen.");
+        Debug.Log("See if the flat plane thing can be solved first tho.");
+        Debug.Log("And look into adding rounding.");
+
         InitMeshMaterial(); // Get the mesh and material.
 
         uint[] tris = (uint[])(object)mesh.triangles;

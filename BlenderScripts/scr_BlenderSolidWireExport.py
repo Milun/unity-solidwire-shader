@@ -379,9 +379,10 @@ def processSelection():
 
             # If multiple materials are used, then the mesh will be rendered with multiple submeshes.
             # Unfortunately, the Unity SolidWire shader breaks if multiple submeshes are used at this time, so instead we'll convert the materials to vertex colors instead.
-            mesh.vertex_colors.active.data[face.loop_indices[0]].color = (face.material_index/10, 0, 0)
-            mesh.vertex_colors.active.data[face.loop_indices[1]].color = (face.material_index/10, 0, 0)
-            mesh.vertex_colors.active.data[face.loop_indices[2]].color = (face.material_index/10, 0, 0)
+            vertexColor = objCur.material_slots[face.material_index].material.diffuse_color
+            mesh.vertex_colors.active.data[face.loop_indices[0]].color = vertexColor
+            mesh.vertex_colors.active.data[face.loop_indices[1]].color = vertexColor
+            mesh.vertex_colors.active.data[face.loop_indices[2]].color = vertexColor
             #face.material_index = 0
 
             # Assign edgeData here.
@@ -393,8 +394,8 @@ def processSelection():
             mesh.uv_layers.active.data[i2].uv.y = edge2.type
             mesh.uv_layers.active.data[i3].uv.y = edge3.type
 
-    # Remove all materials.
-    objCur.data.materials.clear()
+        # Remove all materials from the object before exporting (ensuring only one submesh is used).
+        objCur.data.materials.clear()
 
     print("--------------------------------------------------")
 

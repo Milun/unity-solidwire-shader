@@ -2,14 +2,10 @@
 {
     Properties
     {
-        _WireColor0 ("Wire color 0", Color) = (1,1,1,1) 
-        _WireColor1 ("Wire color 1", Color) = (1,1,1,1) 
-        _WireColor2 ("Wire color 2", Color) = (1,1,1,1) 
-
         _WireStrength ("Wire strength", Range(0.1, 5.0)) = 1.5 
-        _WireThickness ("Wire thickness", Range(0.001, 0.01)) = 0.008 
-        _WireCornerSize("Wire corner size", RANGE(0, 1000)) = 800
-        _WireCornerStrength("Wire corner strength", RANGE(0.0, 10.0)) = 1.5
+        _WireThickness ("Wire thickness", Range(0.001, 0.002)) = 0.001 
+        //_WireCornerSize("Wire corner size", RANGE(0, 1000)) = 800
+        //_WireCornerStrength("Wire corner strength", RANGE(0.0, 10.0)) = 1.5
         //_AlbedoColor("Albedo color", Color) = (0,0,0,1)
     }
     SubShader
@@ -39,6 +35,7 @@
             #pragma vertex vert
             #pragma fragment frag
             #pragma geometry geom
+            //#pragma surface surf Lambert alpha
 
             static const float PREVIEW_THICKNESS = 1.5;
 
@@ -46,17 +43,20 @@
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
+                float4 color : COLOR0;
             };
 
             struct v2g
             {
                 float4 pos : POSITION;
-                int isPreview : COLOR0;
+                float4 color : COLOR0;
+                int isPreview : COLOR1;
             };
 
             struct g2f
             {
                 float4 pos : SV_POSITION;
+                float4 color : COLOR0;
             };
 
             int triIdxCount;
@@ -67,6 +67,7 @@
 
                 // Get the normal clip pos.
                 o.pos = UnityObjectToClipPos(v.vertex);
+                o.color = v.color;
 
                 // Not in editor mode; continue.
                 if (triIdxCount != 0) {
@@ -85,6 +86,7 @@
             }
 
             // For whatever reason, triangleadj works, while triangle doesn't.
+            float _WireThickness;
             [maxvertexcount(6)]
             void geom(triangleadj v2g IN[6], inout TriangleStream<g2f> triangleStream)
             {
@@ -97,41 +99,46 @@
                    
                     // This is a tri drawn inside the Scene view.
                     o.pos = IN[0].pos;
+                    o.color = IN[0].color;
                     triangleStream.Append(o);
 
                     o.pos = IN[1].pos;
+                    o.color = IN[0].color;
                     triangleStream.Append(o);
 
                     o.pos = IN[2].pos;
+                    o.color = IN[0].color;
                     triangleStream.Append(o);
                 }
                 else {
                     // This is a tri drawn inside the Asset preview. Render it differently.
                     o.pos = IN[0].pos;
-                    o.pos.x *= -PREVIEW_THICKNESS;
-                    o.pos.y *= PREVIEW_THICKNESS;
+                    o.color = IN[0].color;
+                    o.pos.x *= -PREVIEW_THICKNESS * _WireThickness * 1000;
+                    o.pos.y *= PREVIEW_THICKNESS * _WireThickness * 1000;
                     o.pos.w *= 1.01;
                     triangleStream.Append(o);
 
                     o.pos = IN[1].pos * 2.1;
-                    o.pos.x *= -PREVIEW_THICKNESS;
-                    o.pos.y *= PREVIEW_THICKNESS;
+                    o.color = IN[0].color;
+                    o.pos.x *= -PREVIEW_THICKNESS * _WireThickness * 1000;
+                    o.pos.y *= PREVIEW_THICKNESS * _WireThickness * 1000;
                     o.pos.w *= 1.01;
                     triangleStream.Append(o);
 
                     o.pos = IN[2].pos * 2.1;
-                    o.pos.x *= -PREVIEW_THICKNESS;
-                    o.pos.y *= PREVIEW_THICKNESS;
+                    o.color = IN[0].color;
+                    o.pos.x *= -PREVIEW_THICKNESS * _WireThickness * 1000;
+                    o.pos.y *= PREVIEW_THICKNESS * _WireThickness * 1000;
                     o.pos.w *= 1.01;
                     triangleStream.Append(o);
                 }
             }
 
-            fixed4 _WireColor0;
             float _WireStrength;
             fixed4 frag(g2f IN) : SV_Target
             {
-                return _WireColor0 * _WireStrength;
+                return IN.color * _WireStrength;
             }
             ENDCG
         }
@@ -171,9 +178,6 @@
                 float4 pos : SV_POSITION;
             };
 
-            // Store the calculated clip pos of all vertices in an array for later use.
-            uniform RWStructuredBuffer<float4> vertsPosRWBuffer : register(u1);
-
             float _WireThickness;
             int triIdxCount;
             v2g vert (appdata v)
@@ -199,18 +203,14 @@
                 // Create a vector between the two pos vectors...
                 float4 diff = o.pos - posExt;
 
-                float editorMulti = triIdxCount == 0 ? 2 : 1;
-                editorMulti *= _WireThickness * 1000;
+                float editorMulti = triIdxCount == 0 ? 2 : 2;
+                editorMulti *= _WireThickness;
 
                 // ...and then make it consistant regardless of size.
-                o.pos -= normalize(diff) * 0.001 * editorMulti * o.pos.w;
+                o.pos -= normalize(diff) * editorMulti * o.pos.w;
                 //o.pos -= normalize(diff) * 0.005;
 
                 o.idxType = (int2)v.uv;
-
-                // TEST
-                // Store the Screen position of the vert in the buffer.
-                vertsPosRWBuffer[v.vertexId] = o.pos;
 
                 return o;
             }
@@ -259,6 +259,8 @@
         {
             Name "Wire"
             Cull Off
+            Blend OneMinusDstColor One
+            ZWrite On
 
             CGPROGRAM
             #include "UnityCG.cginc"
@@ -271,15 +273,16 @@
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
-                uint vertexId : SV_VertexID;
                 float4 color: COLOR0;
+                uint vertexId : SV_VertexID;
             };
 
             struct v2g
             {
                 float4 pos : SV_POSITION;
-                int2 idxType : COLOR0; // x = vert mesh index (ignored bu .shader. Used by .cs) | y = vert edge type (used by shader): -1 | 0 | 1 | 2
-                int colorIdx : COLOR1;
+                float4 color : COLOR0;
+                float4 screenPos : TEXCOORD0;
+                int2 idxType : COLOR1; // x = vert mesh index (ignored bu .shader. Used by .cs) | y = vert edge type (used by shader): -1 | 0 | 1 | 2
             };
 
             struct g2f
@@ -304,7 +307,12 @@
                 o.idxType.x = (int)v.vertexId; // Store the REAL index of the vert (the index set by the Blender export script is used by .cs only).
                 o.idxType.y = (int)v.uv.y;
 
-                o.colorIdx = (int)(v.color.r * 10);
+                o.color = v.color;
+                o.screenPos = ComputeScreenPos(o.pos);
+
+                // Store the Screen position of the vert in the buffer.
+                // THIS FIXED THE STUPID BLINKING EDGE PROBLEM?
+                vertsPosRWBuffer[v.vertexId] = o.pos;
 
                 // TBA: Set the color palette index value here somehow.
 
@@ -340,10 +348,8 @@
                 return -1;
             }
 
-            float _WireCornerSize;
             float _WireThickness;
-
-            void appendEdge(float4 p1, float4 p2, float4 color, float edgeLength, float cornerSize, inout TriangleStream<g2f> OUT)
+            void appendEdge(float4 p1, float4 p2, float4 color, float edgeLength, inout TriangleStream<g2f> OUT)
             {
                 g2f o = (g2f)0;
 
@@ -352,6 +358,8 @@
 
                 float2 n = normalize((p2.xy * p1.w) - (p1.xy * p2.w)); // Important to swap the .w multiplication (will think about why that works).
                 float2 t = float2(n.y, -n.x); //float2(-n.y, n.x); //n;//float2(n.y, -n.x));
+
+                float4 n2 = normalize(p2 - p1);
 
                 // Almost there. Thickness just seems to fluctuate a bit. Look at the stickbug's leg.
 
@@ -362,50 +370,43 @@
 
                 // Also, maybe the line intensity can be done if I do something like multiply the rgb of the colour by intensity to make it brighter, but have all colours be 0.5 (so they'll overlap each other and increase intensity?).
 
-                
+                // OK, new plan. Rotate them like I did ropes.
+                r = 1;
+                r2 = float2(1, 1);
 
                 float4 a0 = p1;
                 float4 a1 = p1;
-
-                // t + n won't work here (because I minus it).
-                // But it's on the right track (it's overlapping them properly and making them brighter).
-
-                float2 b1 = (t) * p1.w * _WireThickness;
-                float2 c1 = (n) * p1.w * _WireThickness;
-                c1 = float2(0, 0);
-                b1.y *= r;
-                c1.y *= r;
-
-                float2 t1 = (-t - n*3) * p1.w * _WireThickness;
-                float2 t2 = (t - n*3) * p1.w * _WireThickness;
+                float2 t1 = (-t) * p1.w * _WireThickness;
+                float2 t2 = (t) * p1.w * _WireThickness;
                 t1.y *= r;
                 t2.y *= r;
                 a0.xy += t1;
                 a1.xy += t2;
+                float4 w1 = n2 * 1 * p1.w * _WireThickness;
+                //w1.y *= r;
+                a0 -= w1;
+                a1 -= w1;
 
                 float3 d0;
-                d0.xy = float2(edgeLength, 0.0) * p1.w * cornerSize;
+                d0.xy = float2(edgeLength, 0.0) * p1.w; //* cornerSize;
                 d0.z = 1.0 / p1.w;
 
                 float4 a2 = p2;
                 float4 a3 = p2;
-
-                float2 b2 = (t) * p2.w * _WireThickness;
-                float2 c2 = (n) * p2.w * _WireThickness;
-                c2 = float2(0, 0);
-                b2.y *= r;
-                c2.y *= r;
-                
-                float2 t3 = (-t + n*3) * p2.w * _WireThickness;
-                float2 t4 = (t + n*3) * p2.w * _WireThickness;
+                float2 t3 = (-t) * p2.w * _WireThickness;
+                float2 t4 = (t) * p2.w * _WireThickness;
                 t3.y *= r;
                 t4.y *= r;
                 a2.xy += t3;
                 a3.xy += t4;
+                float4 w2 = n2 * 1 * p2.w * _WireThickness;
+                //w2.y *= r;
+                a2 += w2;
+                a3 += w2;
 
 
                 float3 d1;
-                d1.xy = float2(0.0, edgeLength) * p2.w * cornerSize;
+                d1.xy = float2(0.0, edgeLength) * p2.w;// *cornerSize;
                 d1.z = 1.0 / p2.w;
 
                 o.pos = a0;
@@ -429,59 +430,6 @@
                 OUT.Append(o);
 
                 OUT.RestartStrip();
-
-                /*o.pos = a1;
-                o.dist = d0;
-                OUT.Append(o);
-
-                o.pos = a2;
-                o.dist = d1;
-                OUT.Append(o);
-
-                o.pos = a3;
-                o.dist = d1;
-                OUT.Append(o);
-
-                OUT.RestartStrip();*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                // How to do shared colour sharp lines: Have Blender set the lower priority one to be "render on edge only (normal)", and set the other one to "render always (sharp)". That should take care of it.
-
-                // The sharp lines are doubly intense due to the same material being used and the edge being drawn twice.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             }
 
             // FIXME: Each tri's culling is checked multiple times at the moment (redundant).
@@ -493,6 +441,16 @@
                 a += (p0.x - p2.x) * (p0.y + p2.y);
 
                 return a > 0;
+            }
+
+            float isTriCulledTest(float2 p0, float2 p1, float2 p2)
+            {
+                float a = 0;
+                a += (p1.x - p0.x) * (p1.y + p0.y);
+                a += (p2.x - p1.x) * (p2.y + p1.y);
+                a += (p0.x - p2.x) * (p0.y + p2.y);
+
+                return a;
             }
 
             bool isTriCulledByIdx(uint triIdx)
@@ -513,7 +471,7 @@
 
                 // If the type value is 2, then always draw the edge.
                 if (edgeType == 2) return true;
-
+                
                 // If there's no adjacent face (adjTriIdx == -1), or if the adjacent face is showing its backface, then draw the edge.
                 if (adjTriIdx < 0 || isTriCulledByIdx(adjTriIdx)) return true;
 
@@ -536,31 +494,40 @@
                 float edge0Length = length(p1 - p0);
                 float edge1Length = length(p2 - p1);
                 float edge2Length = length(p0 - p2);
-                float cornerSize = 1000 - _WireCornerSize;
 
-                float4 color;
-                color = _WireColor0;
-                if (IN[0].colorIdx == 1) color = _WireColor1;
-                if (IN[0].colorIdx == 2) color = _WireColor2;
+                float4 color = IN[0].color;
 
                 // Loose edges
                 // ===========
                 if (IN[0].idxType.y < 0){
-                    appendEdge(IN[1].pos, IN[2].pos, color, edge1Length, cornerSize, OUT);
+                    appendEdge(IN[1].pos, IN[2].pos, color, edge1Length, OUT);
                     return;
                 }
                 if (IN[1].idxType.y < 0){
-                    appendEdge(IN[2].pos, IN[0].pos, color, edge2Length, cornerSize, OUT);
+                    appendEdge(IN[2].pos, IN[0].pos, color, edge2Length, OUT);
                     return;
                 }
                 if (IN[2].idxType.y < 0){
-                    appendEdge(IN[0].pos, IN[1].pos, color, edge0Length, cornerSize, OUT);
+                    appendEdge(IN[0].pos, IN[1].pos, color, edge0Length, OUT);
                     return;
                 }
 
+                /*float test = isTriCulledTest(p0, p1, p2);
+                if (test < 0) color = float4(1,0,0,1);
+                if (test == 0) color = float4(0,1,0,1);
+                if (test > 0) color = float4(0,0,1,1);*/
+
+                /*bool triCulled = isTriCulled(
+                    (IN[1].screenPos.xy / IN[1].screenPos.w) * _ScreenParams.xy,
+                    (IN[0].screenPos.xy / IN[0].screenPos.w) * _ScreenParams.xy,
+                    (IN[2].screenPos.xy / IN[2].screenPos.w) * _ScreenParams.xy
+                );*/
                 bool triCulled = isTriCulled(p0, p1, p2);
                 // If this tri is culled, skip it.
+                //float test2 = 0.001;
+                //if (edge0Length > test2&& edge1Length > test2&& edge2Length > test2) {
                 if (triCulled) return;
+                //}
 
                 // Main edges
                 // ==========
@@ -572,39 +539,38 @@
 
                 // edge0
                 if (isEdgeDrawn(adj.x, IN[1].idxType.y)){
-                    appendEdge(IN[0].pos, IN[1].pos, color, edge0Length, cornerSize, OUT);
+                    appendEdge(IN[0].pos, IN[1].pos, color, edge0Length, OUT);
                 }
 
                 if (isEdgeDrawn(adj.y, IN[2].idxType.y)){
-                    appendEdge(IN[1].pos, IN[2].pos, color, edge1Length, cornerSize, OUT);
+                    appendEdge(IN[1].pos, IN[2].pos, color, edge1Length, OUT);
                 }
 
                 if (isEdgeDrawn(adj.z, IN[0].idxType.y)){
-                    appendEdge(IN[2].pos, IN[0].pos, color, edge2Length, cornerSize, OUT);
+                    appendEdge(IN[2].pos, IN[0].pos, color, edge2Length, OUT);
                 }
             }
 
             /// Frag
             /// ====
             float _WireStrength;
-            float _WireCornerStrength;
             fixed4 frag(g2f IN) : SV_Target
             {
                 float minDistanceToCorner = min(IN.dist[0], IN.dist[1]) * IN.dist[2];
                 
                 // Normal line color.
-                if (minDistanceToCorner > 0.9) {
+                //if (minDistanceToCorner > 0.9) {
                     half4 color = (half4)IN.color * _WireStrength;
                     //color.a = 0.2;
                     return color;
-                }
+                //}
 
                 // Corner highlight color.
-                half4 cornerColor = (half4)IN.color;
+                /*half4 cornerColor = (half4)IN.color;
                 cornerColor.xyz += half3(0.2,0.2,0.2); // Corners are slightly lighter.
                 //cornerColor.a = 0.2;
 
-                return (half4)cornerColor * _WireStrength * _WireCornerStrength;
+                return (half4)cornerColor * _WireStrength * _WireCornerStrength;*/
             }
 
             ENDCG
