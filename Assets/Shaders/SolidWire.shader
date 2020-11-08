@@ -378,12 +378,12 @@
                 float4 a1 = p1;
                 float2 t1 = (-t) * p1.w * _WireThickness;
                 float2 t2 = (t) * p1.w * _WireThickness;
-                t1.y *= r;
-                t2.y *= r;
+                t1.y *= r*2;
+                t2.y *= r*2;
                 a0.xy += t1;
                 a1.xy += t2;
                 float4 w1 = n2 * 1 * p1.w * _WireThickness;
-                //w1.y *= r;
+                w1.y *= r;
                 a0 -= w1;
                 a1 -= w1;
 
@@ -395,12 +395,12 @@
                 float4 a3 = p2;
                 float2 t3 = (-t) * p2.w * _WireThickness;
                 float2 t4 = (t) * p2.w * _WireThickness;
-                t3.y *= r;
-                t4.y *= r;
+                t3.y *= r*2;
+                t4.y *= r*2;
                 a2.xy += t3;
                 a3.xy += t4;
                 float4 w2 = n2 * 1 * p2.w * _WireThickness;
-                //w2.y *= r;
+                w2.y *= r;
                 a2 += w2;
                 a3 += w2;
 

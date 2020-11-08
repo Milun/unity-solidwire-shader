@@ -23,7 +23,7 @@ public class SolidWire : MonoBehaviour
     {
         Debug.Log("After cleaning up, add \"fog\" to the thing, where if an object's center is beyond a certain distance from the camera, it should fade out?");
         Debug.Log("Will need some way to not use that in the map screen.");
-        Debug.Log("See if the flat plane thing can be solved first tho.");
+        Debug.Log("See if the flat plane thing can be solved first tho (that was being caused by the double sided meshes; not much I can do about that).");
         Debug.Log("And look into adding rounding.");
 
         InitMeshMaterial(); // Get the mesh and material.
