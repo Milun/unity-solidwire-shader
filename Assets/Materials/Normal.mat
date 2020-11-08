@@ -73,7 +73,7 @@ Material:
     - _UVSec: 0
     - _WireCornerSize: 0
     - _WireCornerStrength: 0.9
-    - _WireStrength: 0.9
+    - _WireStrength: 1
     - _WireThickness: 0.001
     - _ZWrite: 1
     m_Colors:
