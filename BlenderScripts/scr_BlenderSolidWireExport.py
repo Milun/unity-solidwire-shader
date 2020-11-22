@@ -379,10 +379,20 @@ def processSelection():
 
             # If multiple materials are used, then the mesh will be rendered with multiple submeshes.
             # Unfortunately, the Unity SolidWire shader breaks if multiple submeshes are used at this time, so instead we'll convert the materials to vertex colors instead.
+            # Assign the lowest mat color of each edge to its vert0.
+            
+            matSlots = objCur.material_slots
+            mesh.vertex_colors.active.data[face.loop_indices[0]].color = matSlots[edge1.mat].material.diffuse_color
+            mesh.vertex_colors.active.data[face.loop_indices[1]].color = matSlots[edge2.mat].material.diffuse_color
+            mesh.vertex_colors.active.data[face.loop_indices[2]].color = matSlots[edge3.mat].material.diffuse_color
+            
+            '''
             vertexColor = objCur.material_slots[face.material_index].material.diffuse_color
             mesh.vertex_colors.active.data[face.loop_indices[0]].color = vertexColor
             mesh.vertex_colors.active.data[face.loop_indices[1]].color = vertexColor
             mesh.vertex_colors.active.data[face.loop_indices[2]].color = vertexColor
+            '''
+            
             #face.material_index = 0
 
             # Assign edgeData here.

@@ -3,7 +3,7 @@
     Properties
     {
         _WireStrength ("Wire strength", Range(0.1, 5.0)) = 1.5 
-        _WireThickness ("Wire thickness", Range(0.001, 0.002)) = 0.001 
+        _WireThickness ("Wire thickness", Range(0.001, 0.004)) = 0.001 
         //_WireCornerSize("Wire corner size", RANGE(0, 1000)) = 800
         //_WireCornerStrength("Wire corner strength", RANGE(0.0, 10.0)) = 1.5
         //_AlbedoColor("Albedo color", Color) = (0,0,0,1)
@@ -495,20 +495,20 @@
                 float edge1Length = length(p2 - p1);
                 float edge2Length = length(p0 - p2);
 
-                float4 color = IN[0].color;
+                // TODO: Allow for loose edges to have the NEVER draw type.
 
                 // Loose edges
                 // ===========
                 if (IN[0].idxType.y < 0){
-                    appendEdge(IN[1].pos, IN[2].pos, color, edge1Length, OUT);
+                    appendEdge(IN[1].pos, IN[2].pos, IN[0].color, edge1Length, OUT);
                     return;
                 }
                 if (IN[1].idxType.y < 0){
-                    appendEdge(IN[2].pos, IN[0].pos, color, edge2Length, OUT);
+                    appendEdge(IN[2].pos, IN[0].pos, IN[1].color, edge2Length, OUT);
                     return;
                 }
                 if (IN[2].idxType.y < 0){
-                    appendEdge(IN[0].pos, IN[1].pos, color, edge0Length, OUT);
+                    appendEdge(IN[0].pos, IN[1].pos, IN[2].color, edge0Length, OUT);
                     return;
                 }
 
@@ -539,15 +539,15 @@
 
                 // edge0
                 if (isEdgeDrawn(adj.x, IN[1].idxType.y)){
-                    appendEdge(IN[0].pos, IN[1].pos, color, edge0Length, OUT);
+                    appendEdge(IN[0].pos, IN[1].pos, IN[1].color, edge0Length, OUT);
                 }
 
                 if (isEdgeDrawn(adj.y, IN[2].idxType.y)){
-                    appendEdge(IN[1].pos, IN[2].pos, color, edge1Length, OUT);
+                    appendEdge(IN[1].pos, IN[2].pos, IN[2].color, edge1Length, OUT);
                 }
 
                 if (isEdgeDrawn(adj.z, IN[0].idxType.y)){
-                    appendEdge(IN[2].pos, IN[0].pos, color, edge2Length, OUT);
+                    appendEdge(IN[2].pos, IN[0].pos, IN[0].color, edge2Length, OUT);
                 }
             }
 
