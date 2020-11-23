@@ -351,10 +351,11 @@
             float _WireThickness;
             void appendEdge(float4 p1, float4 p2, float4 color, float edgeLength, inout TriangleStream<g2f> OUT)
             {
+                // TODO: STOP THE ERROR BEING THROWN WHEN THERE'S NO MATERIALS.
+
                 g2f o = (g2f)0;
 
                 float r = _ScreenParams.x / _ScreenParams.y; // Ensure that the line thickness is even regardless of screen size.
-                float2 r2 = float2(1, r)*2;
 
                 float2 n = normalize((p2.xy * p1.w) - (p1.xy * p2.w)); // Important to swap the .w multiplication (will think about why that works).
                 float2 t = float2(n.y, -n.x); //float2(-n.y, n.x); //n;//float2(n.y, -n.x));
@@ -371,15 +372,14 @@
                 // Also, maybe the line intensity can be done if I do something like multiply the rgb of the colour by intensity to make it brighter, but have all colours be 0.5 (so they'll overlap each other and increase intensity?).
 
                 // OK, new plan. Rotate them like I did ropes.
-                r = 1;
-                r2 = float2(1, 1);
+                //r = 1;
 
                 float4 a0 = p1;
                 float4 a1 = p1;
                 float2 t1 = (-t) * p1.w * _WireThickness;
                 float2 t2 = (t) * p1.w * _WireThickness;
-                t1.y *= r*2;
-                t2.y *= r*2;
+                t1.y *= r;//*2;
+                t2.y *= r;//*2;
                 a0.xy += t1;
                 a1.xy += t2;
                 float4 w1 = n2 * 1 * p1.w * _WireThickness;
@@ -395,8 +395,8 @@
                 float4 a3 = p2;
                 float2 t3 = (-t) * p2.w * _WireThickness;
                 float2 t4 = (t) * p2.w * _WireThickness;
-                t3.y *= r*2;
-                t4.y *= r*2;
+                t3.y *= r;//*2;
+                t4.y *= r;//*2;
                 a2.xy += t3;
                 a3.xy += t4;
                 float4 w2 = n2 * 1 * p2.w * _WireThickness;
