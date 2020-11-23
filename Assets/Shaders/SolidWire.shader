@@ -366,57 +366,56 @@
                 // A good intensity for default is probably like 0.8 - 0.9.
                 // Also, maybe the line intensity can be done if I do something like multiply the rgb of the colour by intensity to make it brighter, but have all colours be 0.5 (so they'll overlap each other and increase intensity?).
 
-                float4 a0 = p1;
-                float4 a1 = p1;
-                float2 t1 = (-t) * p1.w * _WireThickness;
-                float2 t2 = (t) * p1.w * _WireThickness;
-                t1.y *= ratio;
-                t2.y *= ratio;
-                a0.xy += t1;
-                a1.xy += t2;
-                float4 w1 = n * 1 * p1.w * _WireThickness;
+
+                // P1
+                // ----------------------------------------
+                float4 c1 = p1; // Corner1
+                float4 c2 = p1; // Corner2
+                float2 off1 = (-t) * p1.w * _WireThickness;
+                float2 off2 = (t) * p1.w * _WireThickness;
+                off1.y *= ratio; off2.y *= ratio;
+                c1.xy += off1; c2.xy += off2;
+                float4 w1 = n * p1.w * _WireThickness;
                 w1.y *= ratio;
-                a0 -= w1;
-                a1 -= w1;
+                c1 -= w1; c2 -= w1;
+
+                // P2
+                // ----------------------------------------
+                float4 c3 = p2; // Corner3
+                float4 c4 = p2; // Corner4
+                float2 t3 = (-t) * p2.w * _WireThickness;
+                float2 t4 = (t) * p2.w * _WireThickness;
+                t3.y *= ratio; t4.y *= ratio;
+                c3.xy += t3; c4.xy += t4;
+                float4 w2 = n * p2.w * _WireThickness;
+                w2.y *= ratio;
+                c3 += w2; c4 += w2;
+
 
                 float3 d0;
                 d0.xy = float2(edgeLength, 0.0) * p1.w; //* cornerSize;
                 d0.z = 1.0 / p1.w;
 
-                float4 a2 = p2;
-                float4 a3 = p2;
-                float2 t3 = (-t) * p2.w * _WireThickness;
-                float2 t4 = (t) * p2.w * _WireThickness;
-                t3.y *= ratio;
-                t4.y *= ratio;
-                a2.xy += t3;
-                a3.xy += t4;
-                float4 w2 = n * 1 * p2.w * _WireThickness;
-                w2.y *= ratio;
-                a2 += w2;
-                a3 += w2;
-
-
                 float3 d1;
-                d1.xy = float2(0.0, edgeLength) * p2.w;// *cornerSize;
+                d1.xy = float2(0.0, edgeLength) * p2.w; // *cornerSize;
                 d1.z = 1.0 / p2.w;
 
-                o.pos = a0;
+                o.pos = c1;
                 o.dist = d0;
                 o.color = color;
                 OUT.Append(o);
 
-                o.pos = a1;
+                o.pos = c2;
                 o.dist = d0;
                 o.color = color;
                 OUT.Append(o);
 
-                o.pos = a2;
+                o.pos = c3;
                 o.dist = d1;
                 o.color = color;
                 OUT.Append(o);
 
-                o.pos = a3;
+                o.pos = c4;
                 o.dist = d1;
                 o.color = color;
                 OUT.Append(o);
