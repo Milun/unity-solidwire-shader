@@ -355,35 +355,27 @@
 
                 g2f o = (g2f)0;
 
-                float r = _ScreenParams.x / _ScreenParams.y; // Ensure that the line thickness is even regardless of screen size.
+                // Ensure that the line thickness is even regardless of screen size and rotation.
+                float ratio = _ScreenParams.x / _ScreenParams.y;
 
-                float2 n = normalize((p2.xy * p1.w) - (p1.xy * p2.w)); // Important to swap the .w multiplication (will think about why that works).
-                float2 t = float2(n.y, -n.x); //float2(-n.y, n.x); //n;//float2(n.y, -n.x));
-
-                float4 n2 = normalize(p2 - p1);
-
-                // Almost there. Thickness just seems to fluctuate a bit. Look at the stickbug's leg.
-
-                // Somehow, the vertical line's correct t value is the normal?
+                float2 _t = normalize((p2.xy * p1.w) - (p1.xy * p2.w)); // Important to swap the .w multiplication.
+                float2 t = float2(_t.y, -_t.x); // Line tangent
+                float4 n = normalize(p2 - p1);  // Line normal
 
                 // NEXT THING TO TAKE CARE OF: Shared colours (look at the rooster's neck).
                 // A good intensity for default is probably like 0.8 - 0.9.
-
                 // Also, maybe the line intensity can be done if I do something like multiply the rgb of the colour by intensity to make it brighter, but have all colours be 0.5 (so they'll overlap each other and increase intensity?).
-
-                // OK, new plan. Rotate them like I did ropes.
-                //r = 1;
 
                 float4 a0 = p1;
                 float4 a1 = p1;
                 float2 t1 = (-t) * p1.w * _WireThickness;
                 float2 t2 = (t) * p1.w * _WireThickness;
-                t1.y *= r;//*2;
-                t2.y *= r;//*2;
+                t1.y *= ratio;
+                t2.y *= ratio;
                 a0.xy += t1;
                 a1.xy += t2;
-                float4 w1 = n2 * 1 * p1.w * _WireThickness;
-                w1.y *= r;
+                float4 w1 = n * 1 * p1.w * _WireThickness;
+                w1.y *= ratio;
                 a0 -= w1;
                 a1 -= w1;
 
@@ -395,12 +387,12 @@
                 float4 a3 = p2;
                 float2 t3 = (-t) * p2.w * _WireThickness;
                 float2 t4 = (t) * p2.w * _WireThickness;
-                t3.y *= r;//*2;
-                t4.y *= r;//*2;
+                t3.y *= ratio;
+                t4.y *= ratio;
                 a2.xy += t3;
                 a3.xy += t4;
-                float4 w2 = n2 * 1 * p2.w * _WireThickness;
-                w2.y *= r;
+                float4 w2 = n * 1 * p2.w * _WireThickness;
+                w2.y *= ratio;
                 a2 += w2;
                 a3 += w2;
 
