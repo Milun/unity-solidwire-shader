@@ -91,7 +91,7 @@ Material:
     - _WireCornerStrength: 0.8
     - _WireHighlight: 3
     - _WireStrength: 1
-    - _WireThickness: 0.004
+    - _WireThickness: 0.001
     - _ZWrite: 1
     m_Colors:
     - _AlbedoColor: {r: 0, g: 0, b: 0, a: 1}

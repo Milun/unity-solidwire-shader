@@ -391,7 +391,6 @@
                 w2.y *= ratio;
                 c3 += w2; c4 += w2;
 
-                float area = abs(edge1.x * edge2.y - edge1.y * edge2.x);
 
                 // Corner rounding (used by the frag shader).
                 // LOOK UP HOW THE OTHER GUY DID IT
@@ -402,7 +401,6 @@
                 // LOOK UP HOW THE OTHER GUY DID IT
                 // LOOK UP HOW THE OTHER GUY DID IT IN 2D
                 float3 d0;
-                //o.dist.xyz = float3((area / length(edge0)), 0.0, 0.0) * o.projSpaceVertex.w * wireThickness;
                 d0.xy = float2(edgeLength, 0.0) * p1.w; //* cornerSize;
                 d0.z = 1.0 / p1.w;
 
