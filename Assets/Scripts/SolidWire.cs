@@ -18,6 +18,8 @@ public class SolidWire : MonoBehaviour
                                             // so for now, they'll all take on the largest size.
                                             // (Wasteful I know. I hope there's a way around this in the future).
 
+    public string Test;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -92,7 +94,9 @@ public class SolidWire : MonoBehaviour
         // My (hopefully temporary) solution is to just have all instances of the shader use the maximum buffer size required as a result.
         if (mesh.vertexCount > maxVertCount) maxVertCount = mesh.vertexCount;
         int vertCount = maxVertCount;
-        vertCount = mesh.vertexCount;
+        //vertCount = mesh.vertexCount;
+
+        Debug.Log("vertCount: " + vertCount);
 
         int vertsPosStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4));
         vertsPosRWBuffer = new ComputeBuffer(vertCount, vertsPosStride, ComputeBufferType.Default);
@@ -112,8 +116,12 @@ public class SolidWire : MonoBehaviour
     /// <param name="meshTris"></param>
     /// <param name="curTriVertIdx">Index of the first vert in the tri.</param>
     /// <returns></returns>
+    /// EXTREMELY COSTLY! NEEDS TO BE DONE BETTER.
     private int[] GetAdjacentTris(uint[] meshTris, int curTriVertIdx)
     {
+        return new int[] { 0, 0, 0 };
+
+
         int t0 = -1; // Adjacent tri 1.
         int t1 = -1; // Adjacent tri 2.
         int t2 = -1; // Adjacent tri 3.
