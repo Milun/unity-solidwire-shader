@@ -432,7 +432,8 @@ def processSelection():
         use_selection = True,
         apply_scale_options = 'FBX_SCALE_ALL',
         bake_space_transform = True, # Needs to be False if an armature is being used?
-        check_existing = True
+        check_existing = True,
+        bake_anim_use_nla_strips = True
     )
 
     # Re-enable printing to console.

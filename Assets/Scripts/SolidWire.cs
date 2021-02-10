@@ -21,10 +21,12 @@ public class SolidWire : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        /*
         Debug.Log("After cleaning up, add \"fog\" to the thing, where if an object's center is beyond a certain distance from the camera, it should fade out?");
         Debug.Log("Will need some way to not use that in the map screen.");
         Debug.Log("See if the flat plane thing can be solved first tho (that was being caused by the double sided meshes; not much I can do about that).");
         Debug.Log("And look into adding rounding.");
+        */
 
         InitMeshMaterial(); // Get the mesh and material.
 
@@ -90,6 +92,7 @@ public class SolidWire : MonoBehaviour
         // My (hopefully temporary) solution is to just have all instances of the shader use the maximum buffer size required as a result.
         if (mesh.vertexCount > maxVertCount) maxVertCount = mesh.vertexCount;
         int vertCount = maxVertCount;
+        vertCount = mesh.vertexCount;
 
         int vertsPosStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4));
         vertsPosRWBuffer = new ComputeBuffer(vertCount, vertsPosStride, ComputeBufferType.Default);
@@ -214,12 +217,19 @@ public class SolidWire : MonoBehaviour
 
     void OnDestroy()
     {
-        vertsPosRWBuffer.Release();
-        triIdxBuffer.Release();
-        triAdjBuffer.Release();
+        try
+        {
+            vertsPosRWBuffer.Release();
+            triIdxBuffer.Release();
+            triAdjBuffer.Release();
 
-        vertsPosRWBuffer.Dispose();
-        triIdxBuffer.Dispose();
-        triAdjBuffer.Dispose();
+            vertsPosRWBuffer.Dispose();
+            triIdxBuffer.Dispose();
+            triAdjBuffer.Dispose();
+        }
+        catch (Exception err)
+        {
+            // Do nothing.
+        }
     }
 }
