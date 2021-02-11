@@ -28,11 +28,41 @@ class SolidWirePostprocessor : AssetPostprocessor
         }
     }
 
+    private Mesh GetMeshFromGameObject(GameObject gameObject)
+    {
+        // Skinned
+        var skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
+        if (skinnedMeshRenderer) {
+            return skinnedMeshRenderer.sharedMesh;
+        }
+
+        // Non-skinned
+        return gameObject.GetComponent<MeshFilter>().sharedMesh;
+    }
+
     void OnPostprocessModel(GameObject g)
     {
+        /*uint[] tris = (uint[])(object)GetMeshFromGameObject(g).triangles;
+        int triIdxCount = tris.Length;*/
+
+        SolidWire solidWire = g.AddComponent<SolidWire>();
+
+        //Debug.Log(triIdxCount);
+        solidWire.Postprocess();
+
+
+
+
+
+
+
+
+
+
+
         // YES! Auto adds the SolidWire to it! Does this mean I can set values on it?
-        g.AddComponent<SolidWire>();
-        g.GetComponent<SolidWire>().Test = "RebelRebel";
+        /*
+        g.GetComponent<SolidWire>().Test = "TestTest";*/
 
         // So just make a public variable on SolidWire that's HIDDEN from the inspector. Then have this thing process the verts for it. EZ.
         // Only issue is that it may re-calculate for the same model each time it's dragged in, but maybe with some clever statics it could be improved or somethin.

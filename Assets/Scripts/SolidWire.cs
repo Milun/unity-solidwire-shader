@@ -9,38 +9,27 @@ public class SolidWire : MonoBehaviour
     private ComputeBuffer triIdxBuffer;     // Store each tri's 3 vert indexes (mesh.triangles) as uint3s.
     private ComputeBuffer triAdjBuffer;     // Storing each tri's 3 adjacent tri indexes (or -1 if there's no adjacent tri on an edge).
 
-    private int triIdxCount;
-    private Mesh mesh;
     private Material[] materials;           // Reference to the SolidWire material(s).
+
+    // The following are calculated when the mesh is imported.
+    [SerializeField][HideInInspector] private uint[] tris;          // mesh.triangles.
+    [SerializeField][HideInInspector] private int[] triAdjs;        // Array of triangle adjacencies (in groups of 3s).
+
+    [SerializeField][HideInInspector] private int triIdxCount;
+    [SerializeField][HideInInspector] private Mesh mesh;
 
     private static int maxVertCount = 0;    // All instances of the shader will set the size of the RWBuffer globally.
                                             // I don't know how (or if you can) have different RWBuffer sizes for each instance of the material,
                                             // so for now, they'll all take on the largest size.
                                             // (Wasteful I know. I hope there's a way around this in the future).
 
+    //[HideInInspector]
     public string Test;
 
     // Start is called before the first frame update
     void Start()
     {
-        /*
-        Debug.Log("After cleaning up, add \"fog\" to the thing, where if an object's center is beyond a certain distance from the camera, it should fade out?");
-        Debug.Log("Will need some way to not use that in the map screen.");
-        Debug.Log("See if the flat plane thing can be solved first tho (that was being caused by the double sided meshes; not much I can do about that).");
-        Debug.Log("And look into adding rounding.");
-        */
-
-        InitMeshMaterial(); // Get the mesh and material.
-
-        uint[] tris = (uint[])(object)mesh.triangles;
-        triIdxCount = tris.Length;
-
-        /*Debug.Log(mesh.subMeshCount);
-        for (var i = 0; i < mesh.subMeshCount; i++) { 
-            Debug.Log("v: " + mesh.GetSubMesh(i).indexStart);
-        }*/
-
-        //Debug.Log("LENGTH: " + triIdxCount);
+        materials = GetMaterials();
 
         // triIdxBuffer
         // ============
@@ -60,7 +49,41 @@ public class SolidWire : MonoBehaviour
         // Store the indexes of adjacent tris.
         int triAdjStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(int)) * 3;
         triAdjBuffer = new ComputeBuffer(triIdxCount/3, triAdjStride, ComputeBufferType.Default);
-        int[,] triAdjs = new int[triIdxCount/3,3];
+        triAdjBuffer.SetData(triAdjs);
+        
+        // vertsPosRWBuffer
+        // ================
+        // Probably bad implementation:
+        // I don't think it's possible to have the vertPosBuffer have a different size for each individual mesh.
+        // As such, if a mesh with 30 verts is created after one with 180, then the 180 vert mesh will have its buffer set to 30 (and won't draw every edge as a result)!
+        // My (hopefully temporary) solution is to just have all instances of the shader use the maximum buffer size required as a result.
+        if (mesh.vertexCount > maxVertCount) maxVertCount = mesh.vertexCount;
+        int vertCount = maxVertCount;
+        //vertCount = mesh.vertexCount;
+
+        int vertsPosStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4));
+        vertsPosRWBuffer = new ComputeBuffer(vertCount, vertsPosStride, ComputeBufferType.Default);
+
+        foreach (var mat in materials)
+        {
+            mat.SetBuffer("triIdxBuffer", triIdxBuffer);
+            mat.SetInt("triIdxCount", triIdxCount);
+            mat.SetBuffer("triAdjBuffer", triAdjBuffer);
+            mat.SetBuffer("vertsPosBuffer", vertsPosRWBuffer);
+        }
+    }
+
+    /// <summary>
+    /// Called by the SolidWirePostprocessor.
+    /// </summary>
+    public void Postprocess()
+	{
+        mesh = GetMesh(); // Get the mesh and material.
+
+        tris = (uint[])(object)mesh.triangles;
+        triIdxCount = tris.Length;
+
+        triAdjs = new int[triIdxCount];
 
         /**
          * Normally, the vert indexes of tris are affected by the UV map, meaning that a single vert can have multiple indexes in some cases.
@@ -78,36 +101,20 @@ public class SolidWire : MonoBehaviour
         for (int i = 0; i < triIdxCount; i += 3)
         {
             var adj = GetAdjacentTris(meshTris, i);
-            triAdjs[i / 3, 0] = adj[0];
-            triAdjs[i / 3, 1] = adj[1];
-            triAdjs[i / 3, 2] = adj[2];
+            triAdjs[i] = adj[0];
+            triAdjs[i + 1] = adj[1];
+            triAdjs[i + 2] = adj[2];
+
+            //triAdjs[i / 3] = new TriAdj(adj[0], adj[1], adj[2]);
+
+            /*triAdjs[i/3, 0] = adj[0];
+            triAdjs[i/3, 1] = adj[1];
+            triAdjs[i/3, 2] = adj[2];*/
+
+            //Debug.Log(triAdjs[i/3, 0]);
         }
 
-        triAdjBuffer.SetData(triAdjs);
-        
-
-        // vertsPosRWBuffer
-        // ================
-        // Probably bad implementation:
-        // I don't think it's possible to have the vertPosBuffer have a different size for each individual mesh.
-        // As such, if a mesh with 30 verts is created after one with 180, then the 180 vert mesh will have its buffer set to 30 (and won't draw every edge as a result)!
-        // My (hopefully temporary) solution is to just have all instances of the shader use the maximum buffer size required as a result.
-        if (mesh.vertexCount > maxVertCount) maxVertCount = mesh.vertexCount;
-        int vertCount = maxVertCount;
-        //vertCount = mesh.vertexCount;
-
-        Debug.Log("vertCount: " + vertCount);
-
-        int vertsPosStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4));
-        vertsPosRWBuffer = new ComputeBuffer(vertCount, vertsPosStride, ComputeBufferType.Default);
-
-        foreach (var mat in materials)
-        {
-            mat.SetBuffer("triIdxBuffer", triIdxBuffer);
-            mat.SetInt("triIdxCount", triIdxCount);
-            mat.SetBuffer("triAdjBuffer", triAdjBuffer);
-            mat.SetBuffer("vertsPosBuffer", vertsPosRWBuffer);
-        }
+        Debug.Log(triAdjs);
     }
 
     /// <summary>
@@ -119,9 +126,6 @@ public class SolidWire : MonoBehaviour
     /// EXTREMELY COSTLY! NEEDS TO BE DONE BETTER.
     private int[] GetAdjacentTris(uint[] meshTris, int curTriVertIdx)
     {
-        return new int[] { 0, 0, 0 };
-
-
         int t0 = -1; // Adjacent tri 1.
         int t1 = -1; // Adjacent tri 2.
         int t2 = -1; // Adjacent tri 3.
@@ -178,6 +182,11 @@ public class SolidWire : MonoBehaviour
         return output;
     }
 
+    /*public void Test2()
+	{
+        Debug.Log("Wubba");
+	}*/
+
     /// <summary>
     /// Returns true if the tri made up of triVertIdxs contains both of the provided edge verts.
     /// </summary>
@@ -195,20 +204,28 @@ public class SolidWire : MonoBehaviour
     /// Assigns the mesh and material the GameObject uses. Auto detects whether it's a skinned mesh or not.
     /// </summary>
     /// <returns></returns>
-    private void InitMeshMaterial()
+    private Mesh GetMesh()
     {
         // Skinned
         var skinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
-        if (skinnedMeshRenderer)
-        {
-            mesh = skinnedMeshRenderer.sharedMesh;
-            materials = skinnedMeshRenderer.materials;
-            return;
+        if (skinnedMeshRenderer) {
+            return skinnedMeshRenderer.sharedMesh;
         }
 
         // Non-skinned
-        mesh = GetComponent<MeshFilter>().sharedMesh;
-        materials = GetComponent<MeshRenderer>().materials;
+        return GetComponent<MeshFilter>().sharedMesh;
+    }
+
+    private Material[] GetMaterials()
+    {
+        // Skinned
+        var skinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
+        if (skinnedMeshRenderer) {
+            return skinnedMeshRenderer.materials;
+        }
+
+        // Non-skinned
+        return GetComponent<MeshRenderer>().materials;
     }
 
     // Update is called once per frame
