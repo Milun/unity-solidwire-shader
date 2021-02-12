@@ -23,8 +23,6 @@ public class SolidWire : MonoBehaviour
                                             // so for now, they'll all take on the largest size.
                                             // (Wasteful I know. I hope there's a way around this in the future).
 
-    //[HideInInspector]
-    public string Test;
 
     // Start is called before the first frame update
     void Start()
@@ -114,7 +112,7 @@ public class SolidWire : MonoBehaviour
             //Debug.Log(triAdjs[i/3, 0]);
         }
 
-        Debug.Log(triAdjs);
+        //Debug.Log(triAdjs);
     }
 
     /// <summary>

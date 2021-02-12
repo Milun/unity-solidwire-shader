@@ -90,7 +90,7 @@ Material:
     - _WireCornerSize: 0
     - _WireCornerStrength: 0.8
     - _WireHighlight: 3
-    - _WireStrength: 1
+    - _WireStrength: 2
     - _WireThickness: 0.001
     - _ZWrite: 1
     m_Colors:

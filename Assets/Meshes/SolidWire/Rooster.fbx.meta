@@ -1,9 +1,24 @@
 fileFormatVersion: 2
-guid: 6e64d6c415d328d448be8dc213841815
+guid: bfd92b40cfc991a44b257bd2df73b213
 ModelImporter:
   serializedVersion: 20101
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: No Name
+    second: {fileID: 2100000, guid: c065feb6247baae4a8ccd59252479290, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Normal
+    second: {fileID: 2100000, guid: c065feb6247baae4a8ccd59252479290, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: SolidWireDefault
+    second: {fileID: 2100000, guid: c065feb6247baae4a8ccd59252479290, type: 2}
   materials:
     materialImportMode: 1
     materialName: 0
