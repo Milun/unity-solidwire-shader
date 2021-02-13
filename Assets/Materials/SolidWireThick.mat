@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Thick
+  m_Name: SolidWireThick
   m_Shader: {fileID: 4800000, guid: 32a9c69166957fc4f9bdc60e41340796, type: 3}
   m_ShaderKeywords: _WINDQUALITY_NONE
   m_LightmapFlags: 4
