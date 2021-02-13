@@ -6,12 +6,6 @@ class SolidWirePostprocessor : AssetPostprocessor
 {
     public Material defaultMaterial;
 
-    /*void OnPreprocessAudio()
-    {
-        //AudioImporter audioImporter = (AudioImporter)assetImporter;
-        //audioImporter.format = AudioImporterFormat.Compressed;
-    }*/
-
     // Good for ensuring the correct settings are applied to the imported meshes.
     // Dunno if this can be used to auto apply stuff or preprocess other data though.
     void OnPreprocessModel()
@@ -25,9 +19,6 @@ class SolidWirePostprocessor : AssetPostprocessor
             ModelImporter modelImporter = assetImporter as ModelImporter;
 
             // The following settings must be used to ensure the SolidWire mesh data gets imported correctly.
-            /*modelImporter.importCameras = false;
-            modelImporter.importLights = false;*/
-            
             modelImporter.meshCompression = ModelImporterMeshCompression.Off;       // Mesh Compression
             modelImporter.isReadable = true;                                        // Read/Write Enabled
             modelImporter.optimizeMeshPolygons = true;                              // Optimize Mesh
@@ -44,13 +35,6 @@ class SolidWirePostprocessor : AssetPostprocessor
 
             // Materials (replace the imported mesh's material with the default SolidWire material).
             modelImporter.SearchAndRemapMaterials(ModelImporterMaterialName.BasedOnTextureName, ModelImporterMaterialSearch.RecursiveUp);
-
-
-            //modelImporter.AddRemap(, )
-
-            //modelImporter.addCollider = false;
-
-            //modelImporter.
         }
     }
 
@@ -66,7 +50,7 @@ class SolidWirePostprocessor : AssetPostprocessor
         return gameObject.GetComponent<MeshFilter>().sharedMesh;
     }
 
-    void RemapDefaultMaterial(Transform t)
+    void ProcessGameObject(Transform t)
 	{
         // Remap materials.
         Renderer renderer = t.gameObject.GetComponent<Renderer>();
@@ -83,32 +67,19 @@ class SolidWirePostprocessor : AssetPostprocessor
                 assetImporter.AddRemap(new AssetImporter.SourceAssetIdentifier(material), defaultMaterial);
             }
 
+            // Add SolidWire.
             SolidWire solidWire = t.gameObject.AddComponent<SolidWire>();
             solidWire.Postprocess();
         }
 
         // Recurse
         foreach (Transform child in t) {
-            RemapDefaultMaterial(child);
+            ProcessGameObject(child);
         }
     }
 
     void OnPostprocessModel(GameObject g)
     {
-        /*uint[] tris = (uint[])(object)GetMeshFromGameObject(g).triangles;
-        int triIdxCount = tris.Length;*/
-
-        
-        RemapDefaultMaterial(g.transform);
-
-        //Debug.Log(triIdxCount);
-        
-
-        // YES! Auto adds the SolidWire to it! Does this mean I can set values on it?
-        /*
-        g.GetComponent<SolidWire>().Test = "TestTest";*/
-
-        // So just make a public variable on SolidWire that's HIDDEN from the inspector. Then have this thing process the verts for it. EZ.
-        // Only issue is that it may re-calculate for the same model each time it's dragged in, but maybe with some clever statics it could be improved or somethin.
+        ProcessGameObject(g.transform);
     }
 }
