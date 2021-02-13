@@ -13,7 +13,7 @@ public class Rotate : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        transform.Rotate(Vector3.one * Time.deltaTime * 30f);
+        //transform.position = Vector3.forward * (Mathf.Cos(Time.time) * 40f + 44f);
 
         //this.GetComponent<MeshRenderer>().material.SetFloat("_WireStrength", 1.5f + Mathf.Cos(Time.time));
     }

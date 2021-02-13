@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: cf1cf004126cb384799cfcebb603293b
+guid: a977b1a65595fea49a4f458a44f3a848
 ModelImporter:
   serializedVersion: 20101
   internalIDToNameTable: []
@@ -15,7 +15,7 @@ ModelImporter:
       name: SolidWireDefault
     second: {fileID: 2100000, guid: c065feb6247baae4a8ccd59252479290, type: 2}
   materials:
-    materialImportMode: 2
+    materialImportMode: 1
     materialName: 0
     materialSearch: 1
     materialLocation: 1

@@ -6,8 +6,8 @@ using UnityEngine;
 public class SolidWire : MonoBehaviour
 {
     private ComputeBuffer vertsPosRWBuffer; // RWBuffer. Will store the calculated clip pos of all vertices in an array for later use (values are set by the shader).
-    private ComputeBuffer triIdxBuffer;     // Store each tri's 3 vert indexes (mesh.triangles) as uint3s.
-    private ComputeBuffer triAdjBuffer;     // Storing each tri's 3 adjacent tri indexes (or -1 if there's no adjacent tri on an edge).
+    [SerializeField][HideInInspector] private ComputeBuffer triIdxBuffer;     // Store each tri's 3 vert indexes (mesh.triangles) as uint3s.
+    [SerializeField][HideInInspector] private ComputeBuffer triAdjBuffer;     // Storing each tri's 3 adjacent tri indexes (or -1 if there's no adjacent tri on an edge).
 
     private Material[] materials;           // Reference to the SolidWire material(s).
 
@@ -34,11 +34,12 @@ public class SolidWire : MonoBehaviour
         // Store the indexes of verts for all tris.
         int triIdxStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)) * 3;
         triIdxBuffer = new ComputeBuffer(triIdxCount, triIdxStride, ComputeBufferType.Default);
-        uint[,] triVecs = new uint[triIdxCount/3,3];
-        for (uint i = 0; i < triIdxCount; i += 3) {
-            triVecs[i/3,0] = tris[i];
-            triVecs[i/3,1] = tris[i+1];
-            triVecs[i/3,2] = tris[i+2];
+        uint[,] triVecs = new uint[triIdxCount / 3, 3];
+        for (uint i = 0; i < triIdxCount; i += 3)
+        {
+            triVecs[i / 3, 0] = tris[i];
+            triVecs[i / 3, 1] = tris[i + 1];
+            triVecs[i / 3, 2] = tris[i + 2];
         }
         triIdxBuffer.SetData(triVecs);
 
@@ -46,9 +47,9 @@ public class SolidWire : MonoBehaviour
         // ============
         // Store the indexes of adjacent tris.
         int triAdjStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(int)) * 3;
-        triAdjBuffer = new ComputeBuffer(triIdxCount/3, triAdjStride, ComputeBufferType.Default);
+        triAdjBuffer = new ComputeBuffer(triIdxCount / 3, triAdjStride, ComputeBufferType.Default);
         triAdjBuffer.SetData(triAdjs);
-        
+
         // vertsPosRWBuffer
         // ================
         // Probably bad implementation:
@@ -102,17 +103,7 @@ public class SolidWire : MonoBehaviour
             triAdjs[i] = adj[0];
             triAdjs[i + 1] = adj[1];
             triAdjs[i + 2] = adj[2];
-
-            //triAdjs[i / 3] = new TriAdj(adj[0], adj[1], adj[2]);
-
-            /*triAdjs[i/3, 0] = adj[0];
-            triAdjs[i/3, 1] = adj[1];
-            triAdjs[i/3, 2] = adj[2];*/
-
-            //Debug.Log(triAdjs[i/3, 0]);
         }
-
-        //Debug.Log(triAdjs);
     }
 
     /// <summary>

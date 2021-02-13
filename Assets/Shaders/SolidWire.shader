@@ -3,7 +3,8 @@
     Properties
     {
         _WireStrength ("Wire strength", Range(0.1, 5.0)) = 1.5 
-        _WireThickness ("Wire thickness", Range(0.001, 0.004)) = 0.001 
+        _WireThickness ("Wire thickness", Range(0.1, 4.0)) = 1.0 
+        [MaterialToggle] _AdjustThickness("Adjust thickness based on color brightness.", Float) = 0 // Darker colours appear "thinner"; this attempts to balance them by making the lines thicker.
         //_WireCornerSize("Wire corner size", RANGE(0, 1000)) = 800
         //_WireCornerStrength("Wire corner strength", RANGE(0.0, 10.0)) = 1.5
         //_AlbedoColor("Albedo color", Color) = (0,0,0,1)
@@ -11,7 +12,7 @@
     SubShader
     {
         //Tags { "RenderType"="Opaque" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
-        Tags { "RenderType" = "Transparent" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
+        Tags { "RenderType" = "Transparent" "IgnoreProjector" = "True" /*"PreviewType" = "Plane"*/ }
         Blend SrcAlpha OneMinusSrcAlpha
         LOD 200
         Cull Back
@@ -114,22 +115,22 @@
                     // This is a tri drawn inside the Asset preview. Render it differently.
                     o.pos = IN[0].pos;
                     o.color = IN[0].color;
-                    o.pos.x *= -PREVIEW_THICKNESS * _WireThickness * 1000;
-                    o.pos.y *= PREVIEW_THICKNESS * _WireThickness * 1000;
+                    o.pos.x *= -PREVIEW_THICKNESS * _WireThickness;
+                    o.pos.y *= PREVIEW_THICKNESS * _WireThickness;
                     o.pos.w *= 1.01;
                     triangleStream.Append(o);
 
                     o.pos = IN[1].pos * 2.1;
                     o.color = IN[0].color;
-                    o.pos.x *= -PREVIEW_THICKNESS * _WireThickness * 1000;
-                    o.pos.y *= PREVIEW_THICKNESS * _WireThickness * 1000;
+                    o.pos.x *= -PREVIEW_THICKNESS * _WireThickness;
+                    o.pos.y *= PREVIEW_THICKNESS * _WireThickness;
                     o.pos.w *= 1.01;
                     triangleStream.Append(o);
 
                     o.pos = IN[2].pos * 2.1;
                     o.color = IN[0].color;
-                    o.pos.x *= -PREVIEW_THICKNESS * _WireThickness * 1000;
-                    o.pos.y *= PREVIEW_THICKNESS * _WireThickness * 1000;
+                    o.pos.x *= -PREVIEW_THICKNESS * _WireThickness;
+                    o.pos.y *= PREVIEW_THICKNESS * _WireThickness;
                     o.pos.w *= 1.01;
                     triangleStream.Append(o);
                 }
@@ -164,12 +165,15 @@
                 float4 vertex : POSITION;
                 float4 normal : NORMAL;
                 float2 uv : TEXCOORD0;
+                float4 color: COLOR0;
                 uint vertexId : SV_VertexID;
             };
 
             struct v2g
             {
                 float4 pos : POSITION;
+                float4 normal : NORMAL;
+                float4 color: COLOR1;
                 int2 idxType : COLOR0; // x = vert mesh index (ignored bu .shader. Used by .cs) | y = vert edge type (used by shader): -1 | 0 | 1 | 2
             };
 
@@ -178,8 +182,7 @@
                 float4 pos : SV_POSITION;
             };
 
-            float _WireThickness;
-            int triIdxCount;
+            
             v2g vert (appdata v)
             {
                 v2g o;
@@ -189,38 +192,36 @@
                 * but still obscures any lines which would normally be obscured by geometry closer to the camera.
                 */
 
-                //float multiplier = unity_OrthoParams.x * 0.1;
-
-                // * I needed to ensure that the contraction of the verts was consistant regardless of mesh scale, so I did this.
-                // There's probably a better way to do this, but this works for now.
-
                 // Get the normal clip pos.
                 o.pos = UnityObjectToClipPos(v.vertex);
+                o.normal = normalize(v.normal);
+                o.color = v.color;
 
-                // Get what the clip pos would be if the vert was moved along its normal by 1.
                 float4 posExt = UnityObjectToClipPos(v.vertex.xyz - normalize(v.normal));
-
-                // Create a vector between the two pos vectors...
                 float4 diff = o.pos - posExt;
-
-                float editorMulti = triIdxCount == 0 ? 2 : 2;
-                editorMulti *= _WireThickness;
-
-                // ...and then make it consistant regardless of size.
-                o.pos -= normalize(diff) * editorMulti * o.pos.w;
-                //o.pos -= normalize(diff) * 0.005;
+                o.normal = -normalize(diff);
 
                 o.idxType = (int2)v.uv;
 
                 return o;
             }
 
+            float _WireThickness;
+            int triIdxCount;
+
+            float4 GetOffsetThickness() {
+
+                float wireThickness = (_WireThickness) / _ScreenParams.x;
+                wireThickness *= triIdxCount == 0 ? 2 : 1.25; // If in editor, contract slightly more (to make the lines more visible).
+                //float ratio = _ScreenParams.x / _ScreenParams.y;
+
+                return wireThickness;
+            }
+
             // For whatever reason, triangleadj works, while triangle doesn't.
             [maxvertexcount(6)]
             void geom(triangleadj v2g IN[6], inout TriangleStream<g2f> triangleStream)
             {
-                g2f o = (g2f)0;
-
                 /**
                 * Check if a vert in this tri marks it as a "placeholder" tri.
                 * "Placeholder" tris are added by the Blender script in order to allow loose edges in meshes to be easily imported by Unity.
@@ -231,16 +232,25 @@
                 if (IN[1].idxType.y < 0) return;
                 if (IN[2].idxType.y < 0) return;
 
-                //if (IN[0].pos.x > 3) return;
+                g2f o = (g2f)0;
+
+                float wireThickness = GetOffsetThickness();
+
+                float4 off0 = IN[0].normal * wireThickness * IN[0].pos.w;
+                float4 off1 = IN[1].normal * wireThickness * IN[1].pos.w;
+                float4 off2 = IN[2].normal * wireThickness * IN[2].pos.w;
+                /*off0.y *= ratio;
+                off1.y *= ratio;
+                off2.y *= ratio;*/
 
                 // This is a real tri. Render it.
-                o.pos = IN[0].pos;
+                o.pos = IN[0].pos + off0;
                 triangleStream.Append(o);
 
-                o.pos = IN[1].pos;
+                o.pos = IN[1].pos + off1;
                 triangleStream.Append(o);
 
-                o.pos = IN[2].pos;
+                o.pos = IN[2].pos + off2;
                 triangleStream.Append(o);
             }
 
@@ -349,14 +359,31 @@
             }
 
             float _WireThickness;
+            float _AdjustThickness;
             void appendEdge(float4 p1, float4 p2, float4 color, float edgeLength, inout TriangleStream<g2f> OUT)
             {
                 // TODO: STOP THE ERROR BEING THROWN WHEN THERE'S NO MATERIALS.
+
+                float wireThickness = _WireThickness;
+
+                // Experimental: increase wire width slightly based on luminance.
+                if (_AdjustThickness && triIdxCount != 0) {
+                    float luminance = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
+                    float l = 1 - luminance;
+                    wireThickness += l*l*4;
+                }
+
+                wireThickness = wireThickness / _ScreenParams.x;
+
+                // Have the wireThickness be the same amount of pixels REGARDLESS of the viewport size.
+                // Note: this will make the wires thicker on smaller resolutions.
+                //wireThickness *= _ScreenParams.x / 10.0;
 
                 g2f o = (g2f)0;
 
                 // Ensure that the line thickness is even regardless of screen size and rotation.
                 float ratio = _ScreenParams.x / _ScreenParams.y;
+                //ratio = 1;
 
                 float2 _t = normalize((p2.xy * p1.w) - (p1.xy * p2.w)); // Important to swap the .w multiplication.
                 float2 t = float2(_t.y, -_t.x); // Line tangent
@@ -371,25 +398,31 @@
                 // ----------------------------------------
                 float4 c1 = p1; // Corner1
                 float4 c2 = p1; // Corner2
-                float2 off1 = (-t) * p1.w * _WireThickness;
-                float2 off2 = (t) * p1.w * _WireThickness;
-                off1.y *= ratio; off2.y *= ratio;
-                c1.xy += off1; c2.xy += off2;
-                float4 w1 = n * p1.w * _WireThickness;
+                float2 off1 = (-t) * p1.w * wireThickness;
+                float2 off2 = (t) * p1.w * wireThickness;
+                off1.y *= ratio;
+                off2.y *= ratio;
+                c1.xy += off1;
+                c2.xy += off2;
+                float4 w1 = n * p1.w * wireThickness;
                 w1.y *= ratio;
-                c1 -= w1; c2 -= w1;
+                c1 -= w1;
+                c2 -= w1;
 
                 // P2
                 // ----------------------------------------
                 float4 c3 = p2; // Corner3
                 float4 c4 = p2; // Corner4
-                float2 t3 = (-t) * p2.w * _WireThickness;
-                float2 t4 = (t) * p2.w * _WireThickness;
-                t3.y *= ratio; t4.y *= ratio;
-                c3.xy += t3; c4.xy += t4;
-                float4 w2 = n * p2.w * _WireThickness;
+                float2 t3 = (-t) * p2.w * wireThickness;
+                float2 t4 = (t) * p2.w * wireThickness;
+                t3.y *= ratio;
+                t4.y *= ratio;
+                c3.xy += t3;
+                c4.xy += t4;
+                float4 w2 = n * p2.w * wireThickness;
                 w2.y *= ratio;
-                c3 += w2; c4 += w2;
+                c3 += w2;
+                c4 += w2;
 
 
                 // Corner rounding (used by the frag shader).
@@ -409,23 +442,23 @@
                 d1.z = 1.0 / p2.w;
 
                 o.pos = c1;
-                o.dist = d0;
                 o.color = color;
+                        o.dist = d0;
                 OUT.Append(o);
 
                 o.pos = c2;
-                o.dist = d0;
                 o.color = color;
+                        o.dist = d0;
                 OUT.Append(o);
 
                 o.pos = c3;
-                o.dist = d1;
                 o.color = color;
+                        o.dist = d1;
                 OUT.Append(o);
 
                 o.pos = c4;
-                o.dist = d1;
                 o.color = color;
+                        o.dist = d1;
                 OUT.Append(o);
 
                 OUT.RestartStrip();
