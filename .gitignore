@@ -2,13 +2,13 @@
 #
 # Get latest from https://github.com/github/gitignore/blob/master/Unity.gitignore
 #
-/[Ll]ibrary/
-/[Tt]emp/
-/[Oo]bj/
-/[Bb]uild/
-/[Bb]uilds/
-/[Ll]ogs/
-/[Mm]emoryCaptures/
+unity-solidwire-shader__source/[Ll]ibrary/
+unity-solidwire-shader__source/[Tt]emp/
+unity-solidwire-shader__source/[Oo]bj/
+unity-solidwire-shader__source/[Bb]uild/
+unity-solidwire-shader__source/[Bb]uilds/
+unity-solidwire-shader__source/[Ll]ogs/
+unity-solidwire-shader__source/[Mm]emoryCaptures/
 
 # Never ignore Asset meta data
 !/[Aa]ssets/**/*.meta
