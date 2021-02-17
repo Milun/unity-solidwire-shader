@@ -79,6 +79,7 @@ public class SolidWire : MonoBehaviour
         triIdxCount = triVerts.Length;
 
         triAdjs = new int[triIdxCount];
+        for (int i = 0; i < triAdjs.Length; i++) triAdjs[i] = -1; // Undefined.
 
         /**
          * Normally, the vert indexes of tris are affected by the UV map, meaning that a single vert can have multiple indexes in some cases.
@@ -95,10 +96,7 @@ public class SolidWire : MonoBehaviour
         // Now, for each tri, find its adjacent vertices.
         for (int i = 0; i < triIdxCount; i += 3)
         {
-            var adj = GetAdjacentTris(meshTris, i);
-            triAdjs[i] = adj[0];
-            triAdjs[i + 1] = adj[1];
-            triAdjs[i + 2] = adj[2];
+            GetAdjacentTris(meshTris, i);
         }
     }
 
@@ -109,17 +107,21 @@ public class SolidWire : MonoBehaviour
     /// <param name="curTriVertIdx">Index of the first vert in the tri.</param>
     /// <returns></returns>
     /// EXTREMELY COSTLY! NEEDS TO BE DONE BETTER.
-    private int[] GetAdjacentTris(uint[] meshTris, int curTriVertIdx)
+    private void GetAdjacentTris(uint[] meshTris, int curTriVertIdx)
     {
-        int t0 = -1; // Adjacent tri 1.
-        int t1 = -1; // Adjacent tri 2.
-        int t2 = -1; // Adjacent tri 3.
+        int t0 = triAdjs[curTriVertIdx];    // Adjacent tri 1.
+        int t1 = triAdjs[curTriVertIdx+1];  // Adjacent tri 2.
+        int t2 = triAdjs[curTriVertIdx+2];  // Adjacent tri 3.
+
+        // All of this tris adjacencies have already been calculated.
+        if (t0 > 0 && t1 > 0 && t2 > 0) return; 
 
         uint v0 = meshTris[curTriVertIdx];
         uint v1 = meshTris[curTriVertIdx+1];
         uint v2 = meshTris[curTriVertIdx+2];
 
-        for (int i = 0; i < meshTris.Length; i+= 3)
+        // Start the loop from the current tri (all previous tris will have assigned themselves to it by now).
+        for (int i = curTriVertIdx; i < meshTris.Length; i+= 3)
         {
             if (i == curTriVertIdx) continue; // The tri being checked isn't adjacent to itself.
 
@@ -129,8 +131,10 @@ public class SolidWire : MonoBehaviour
             // This tri is adjacent to edge0.
             if (t0 < 0)
             {
-                if (CheckTriContainsEdge(t, new uint[] {v0, v1 })){
+                int a = CheckTriContainsEdge(t, new uint[] { v0, v1 });
+                if (a >= 0){
                     t0 = i / 3;
+                    triAdjs[i+a] = curTriVertIdx / 3; // Assign to the other tri (save time on duplicate calculations).
                     continue;
                 }
             }
@@ -138,9 +142,11 @@ public class SolidWire : MonoBehaviour
             // This tri is adjacent to edge1.
             if (t1 < 0)
             {
-                if (CheckTriContainsEdge(t, new uint[] { v1, v2 }))
+                int a = CheckTriContainsEdge(t, new uint[] { v1, v2 });
+                if (a >= 0)
                 {
                     t1 = i / 3;
+                    triAdjs[i+a] = curTriVertIdx / 3; // Assign to the other tri (save time on duplicate calculations).
                     continue;
                 }
             }
@@ -148,17 +154,23 @@ public class SolidWire : MonoBehaviour
             // This tri is adjacent to edge2.
             if (t2 < 0)
             {
-                if (CheckTriContainsEdge(t, new uint[] { v2, v0 }))
+                int a = CheckTriContainsEdge(t, new uint[] { v2, v0 });
+                if (a >= 0)
                 {
                     t2 = i / 3;
+                    triAdjs[i+a] = curTriVertIdx / 3; // Assign to the other tri (save time on duplicate calculations).
                     continue;
                 }
             }
         }
 
-        int[] output = new int[] { t0, t1, t2 };
+        //int[] output = new int[] { t0, t1, t2 };
 
-        return output;
+        triAdjs[curTriVertIdx] = t0;
+        triAdjs[curTriVertIdx + 1] = t1;
+        triAdjs[curTriVertIdx + 2] = t2;
+
+        //return output;
     }
 
     /*public void Test2()
@@ -167,16 +179,27 @@ public class SolidWire : MonoBehaviour
 	}*/
 
     /// <summary>
-    /// Returns true if the tri made up of triVertIdxs contains both of the provided edge verts.
+    /// Returns -1 if the tri at triIdx doesnt contain both edgeVertIdxs.
+    /// Returns 0,1,2 otherwise (depending on which edge on tri the match is found).
     /// </summary>
     /// <param name="triVertIdxs"></param>
     /// <param name="edgeVertIdxs"></param>
     /// <returns></returns>
-    private bool CheckTriContainsEdge(uint[] triVertIdxs, uint[] edgeVertIdxs)
+    private int CheckTriContainsEdge(uint[] triVertIdxs, uint[] edgeVertIdxs)
     {
-        if (!Array.Exists(triVertIdxs, e => e == edgeVertIdxs[0])) return false;
-        if (!Array.Exists(triVertIdxs, e => e == edgeVertIdxs[1])) return false;
-        return true;
+        if (triVertIdxs[0] == edgeVertIdxs[0] && triVertIdxs[1] == edgeVertIdxs[1]) return 0;
+        if (triVertIdxs[0] == edgeVertIdxs[1] && triVertIdxs[1] == edgeVertIdxs[0]) return 0;
+
+        if (triVertIdxs[1] == edgeVertIdxs[0] && triVertIdxs[2] == edgeVertIdxs[1]) return 1;
+        if (triVertIdxs[1] == edgeVertIdxs[1] && triVertIdxs[2] == edgeVertIdxs[0]) return 1;
+
+        if (triVertIdxs[2] == edgeVertIdxs[0] && triVertIdxs[0] == edgeVertIdxs[1]) return 2;
+        if (triVertIdxs[2] == edgeVertIdxs[1] && triVertIdxs[0] == edgeVertIdxs[0]) return 2;
+
+        //if (!Array.Exists(triVertIdxs, e => e == edgeVertIdxs[0])) return false;
+        //if (!Array.Exists(triVertIdxs, e => e == edgeVertIdxs[1])) return false;
+
+        return -1;
     }
 
     /// <summary>
