@@ -266,6 +266,8 @@ public class SolidWire : MonoBehaviour
         if (!LineObject) return;
 
         // Clip positions for each of the vertices.
+        // FIXME! THIS ONLY WORKS IF THERE'S ONLY ONE SOLIDWIRE MESH IN THE STAGE.
+        // I guess it's reading from the vertsPosRWBuffer incorrectly...
         Vector4[] clipPositions = new Vector4[maxVertCount];
         vertsPosRWBuffer.GetData(clipPositions);
 
