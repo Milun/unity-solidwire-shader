@@ -5,6 +5,7 @@
         _WireStrength ("Wire strength", Range(0.1, 5.0)) = 1.5 
         _WireThickness ("Wire thickness", Range(0.1, 4.0)) = 1.0 
         [MaterialToggle] _AdjustThickness("Adjust thickness based on color brightness.", Float) = 0 // Darker colours appear "thinner"; this attempts to balance them by making the lines thicker.
+        _Colorize("Colorize", Color) = (0,0,0,1)
         //_WireCornerSize("Wire corner size", RANGE(0, 1000)) = 800
         //_WireCornerStrength("Wire corner strength", RANGE(0.0, 10.0)) = 1.5
         //_AlbedoColor("Albedo color", Color) = (0,0,0,1)
@@ -269,7 +270,7 @@
         {
             Name "Wire"
             Cull Off
-            Blend OneMinusDstColor One
+            Blend OneMinusDstColor One  // Disable this to make the lines solid. Enable to make them overlap (more accurate to vector consoles).
             ZWrite On
 
             CGPROGRAM
@@ -360,9 +361,13 @@
 
             float _WireThickness;
             float _AdjustThickness;
-            void appendEdge(float4 p1, float4 p2, float4 color, float edgeLength, inout TriangleStream<g2f> OUT)
+            float4 _Colorize;
+            void appendEdge(float4 p1, float4 p2, float4 _color, float edgeLength, inout TriangleStream<g2f> OUT)
             {
                 // TODO: STOP THE ERROR BEING THROWN WHEN THERE'S NO MATERIALS.
+
+                float4 color = _color;
+                if (_Colorize.r != 0 || _Colorize.g != 0 || _Colorize.b != 0) color = _Colorize;
 
                 float wireThickness = _WireThickness;
 
@@ -370,7 +375,7 @@
                 if (_AdjustThickness && triIdxCount != 0) {
                     float luminance = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
                     float l = 1 - luminance;
-                    wireThickness += l*l*4;
+                    wireThickness += l*l*3;
                 }
 
                 wireThickness = wireThickness / _ScreenParams.x;
@@ -473,16 +478,6 @@
                 a += (p0.x - p2.x) * (p0.y + p2.y);
 
                 return a > 0;
-            }
-
-            float isTriCulledTest(float2 p0, float2 p1, float2 p2)
-            {
-                float a = 0;
-                a += (p1.x - p0.x) * (p1.y + p0.y);
-                a += (p2.x - p1.x) * (p2.y + p1.y);
-                a += (p0.x - p2.x) * (p0.y + p2.y);
-
-                return a;
             }
 
             bool isTriCulledByIdx(uint triIdx)
@@ -588,11 +583,14 @@
             float _WireStrength;
             fixed4 frag(g2f IN) : SV_Target
             {
-                float minDistanceToCorner = min(IN.dist[0], IN.dist[1]) * IN.dist[2];
+                //float minDistanceToCorner = min(IN.dist[0], IN.dist[1]) * IN.dist[2];
                 
                 // Normal line color.
                 //if (minDistanceToCorner > 0.9) {
                     half4 color = (half4)IN.color * _WireStrength;
+                    //color.a = 0.9;
+                    //color.a = 0.5;
+                    //color = half4(1,1,1,1);
                     //color.a = 0.2;
                     return color;
                 //}

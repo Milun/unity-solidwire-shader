@@ -12,7 +12,7 @@ public class SolidWire : MonoBehaviour
     private Material[] materials;           // Reference to the SolidWire material(s).
 
     // The following are calculated when the mesh is imported.
-    [SerializeField][HideInInspector] private uint[] tris;          // mesh.triangles.
+    [SerializeField][HideInInspector] private uint[] triVerts;      // mesh.triangles.
     [SerializeField][HideInInspector] private int[] triAdjs;        // Array of triangle adjacencies (in groups of 3s).
 
     [SerializeField][HideInInspector] private int triIdxCount;
@@ -23,6 +23,7 @@ public class SolidWire : MonoBehaviour
                                             // so for now, they'll all take on the largest size.
                                             // (Wasteful I know. I hope there's a way around this in the future).
 
+    public GameObject LineObject;
 
     // Start is called before the first frame update
     void Start()
@@ -34,14 +35,7 @@ public class SolidWire : MonoBehaviour
         // Store the indexes of verts for all tris.
         int triIdxStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)) * 3;
         triIdxBuffer = new ComputeBuffer(triIdxCount, triIdxStride, ComputeBufferType.Default);
-        uint[,] triVecs = new uint[triIdxCount / 3, 3];
-        for (uint i = 0; i < triIdxCount; i += 3)
-        {
-            triVecs[i / 3, 0] = tris[i];
-            triVecs[i / 3, 1] = tris[i + 1];
-            triVecs[i / 3, 2] = tris[i + 2];
-        }
-        triIdxBuffer.SetData(triVecs);
+        triIdxBuffer.SetData(triVerts);
 
         // triAdjBuffer
         // ============
@@ -70,6 +64,8 @@ public class SolidWire : MonoBehaviour
             mat.SetBuffer("triAdjBuffer", triAdjBuffer);
             mat.SetBuffer("vertsPosBuffer", vertsPosRWBuffer);
         }
+
+        //Explode();
     }
 
     /// <summary>
@@ -79,8 +75,8 @@ public class SolidWire : MonoBehaviour
 	{
         mesh = GetMesh(); // Get the mesh and material.
 
-        tris = (uint[])(object)mesh.triangles;
-        triIdxCount = tris.Length;
+        triVerts = (uint[])(object)mesh.triangles;
+        triIdxCount = triVerts.Length;
 
         triAdjs = new int[triIdxCount];
 
@@ -93,7 +89,7 @@ public class SolidWire : MonoBehaviour
         uint[] meshTris = new uint[triIdxCount];
         for (int i = 0; i < triIdxCount; i++)
         {
-            meshTris[i] = (uint)mesh.uv[tris[i]].x;
+            meshTris[i] = (uint)mesh.uv[triVerts[i]].x;
         }
 
         // Now, for each tri, find its adjacent vertices.
@@ -105,6 +101,27 @@ public class SolidWire : MonoBehaviour
             triAdjs[i + 2] = adj[2];
         }
     }
+    /*
+    bool isTriCulled(float2 p0, float2 p1, float2 p2)
+    {
+        float a = 0;
+        a += (p1.x - p0.x) * (p1.y + p0.y);
+        a += (p2.x - p1.x) * (p2.y + p1.y);
+        a += (p0.x - p2.x) * (p0.y + p2.y);
+
+        return a > 0;
+    }
+
+    bool isTriCulledByIdx(uint triIdx)
+    {
+        uint3 t = triIdxBuffer[triIdx];
+
+        float2 p0 = vertsPosRWBuffer[t.x].xy / vertsPosRWBuffer[t.x].w;
+        float2 p1 = vertsPosRWBuffer[t.y].xy / vertsPosRWBuffer[t.y].w;
+        float2 p2 = vertsPosRWBuffer[t.z].xy / vertsPosRWBuffer[t.z].w;
+
+        return isTriCulled(p0, p1, p2);
+    }*/
 
     /// <summary>
     /// 
@@ -211,11 +228,174 @@ public class SolidWire : MonoBehaviour
         return GetComponent<MeshRenderer>().materials;
     }
 
+    bool IsTriCulled(Vector2 p0, Vector2 p1, Vector2 p2)
+    {
+        float a = 0;
+        a += (p1.x - p0.x) * (p1.y + p0.y);
+        a += (p2.x - p1.x) * (p2.y + p1.y);
+        a += (p0.x - p2.x) * (p0.y + p2.y);
+
+        return a > 0;
+    }
+
+    Vector2 XY(Vector4 v)
+	{
+        return new Vector2(v.x, v.y);
+	}
+
+    bool IsTriCulledByIdx(int triIdx, Vector4[] clipPositions)
+    {
+        uint v0 = triVerts[triIdx];
+        uint v1 = triVerts[triIdx+1];
+        uint v2 = triVerts[triIdx+2];
+
+        Vector2 p0 = XY(clipPositions[v0]) / clipPositions[v0].w;
+        Vector2 p1 = XY(clipPositions[v1]) / clipPositions[v1].w;
+        Vector2 p2 = XY(clipPositions[v2]) / clipPositions[v2].w;
+
+        return IsTriCulled(p0, p1, p2);
+    }
+
+    /// <summary>
+    /// Experimental (creates an object for every visible line on the frame that it's called).
+    /// </summary>
+    private void Explode()
+	{
+        if (!LineObject) return;
+
+        // Clip positions for each of the vertices.
+        Vector4[] clipPositions = new Vector4[maxVertCount];
+        vertsPosRWBuffer.GetData(clipPositions);
+
+        // For all tris, determine which are currently being culled.
+        bool[] trisCulled = new bool[triVerts.Length / 3];
+        for (int i = 0; i < triVerts.Length; i += 3)
+        {
+            bool isCulled = IsTriCulledByIdx(i, clipPositions);
+            trisCulled[i / 3] = isCulled;
+        }
+
+        var colors = mesh.colors;
+        var verts = mesh.vertices;
+        var uvs = mesh.uv;
+
+        // For each tri...
+        for (int i = 0; i < triVerts.Length; i += 3)
+		{
+            // Index of current tris.
+            int triIdx = i;
+
+            // Index of the 3 verts that make up this tri.
+            uint idx0 = triVerts[triIdx];
+            uint idx1 = triVerts[triIdx + 1];
+            uint idx2 = triVerts[triIdx + 2];
+
+            // Index of adjacent tris (if -1, there's no tri adjacent there).
+            int adjTri0 = triAdjs[triIdx];
+            int adjTri1 = triAdjs[triIdx+1];
+            int adjTri2 = triAdjs[triIdx+2];
+
+            bool c = trisCulled[triIdx/3];
+            bool c0 = trisCulled[adjTri0/3];
+            bool c1 = trisCulled[adjTri1/3];
+            bool c2 = trisCulled[adjTri2/3];
+            
+            if (!c)
+			{
+                if (isEdgeDrawn(adjTri0, (uint)uvs[idx1].y, trisCulled))
+                    GenerateLineObjects(
+                        gameObject.transform.TransformPoint(verts[idx0]),
+                        gameObject.transform.TransformPoint(verts[idx1]),
+                        colors[idx1]
+                    );
+                if (isEdgeDrawn(adjTri1, (uint)uvs[idx2].y, trisCulled))
+                    GenerateLineObjects(
+                        gameObject.transform.TransformPoint(verts[idx1]),
+                        gameObject.transform.TransformPoint(verts[idx2]),
+                        colors[idx2]
+                    );
+                if (isEdgeDrawn(adjTri2, (uint)uvs[idx0].y, trisCulled))
+                    GenerateLineObjects(
+                        gameObject.transform.TransformPoint(verts[idx2]),
+                        gameObject.transform.TransformPoint(verts[idx0]),
+                        colors[idx0]
+                    );
+			}
+		}
+
+        Destroy(gameObject);
+	}
+
+    void GenerateLineObjects(Vector3 p1, Vector3 p2, Color color)
+	{
+        const float MAX_LENGTH = 2f;
+        Vector3 v = p2 - p1;
+
+        // Determine how many segments the vector should be split into.
+        float segments = (float)Math.Ceiling(v.magnitude / MAX_LENGTH);
+        //Debug.Log(segments);
+
+        for (int i = 0; i < segments; i++) {
+            GenerateLineObject(p1 + (v / segments) * (i), p1 + (v / segments) * (i + 1), color);
+		}
+	}
+
+    public void SetColor(Color color)
+	{
+        this.GetMaterials()[0].SetColor("_Colorize", color);
+	}
+
+    void GenerateLineObject(Vector3 p1, Vector3 p2, Color color)
+	{
+        Vector3 v = p2 - p1;
+
+        var lineObject = Instantiate(LineObject);
+        lineObject.transform.position = p1;
+        lineObject.transform.localScale = new Vector3(1f,1f,v.magnitude);
+        lineObject.transform.rotation = Quaternion.LookRotation(v.normalized);
+        lineObject.GetComponent<SolidWire>().SetColor(color);
+
+        //lineObject.GetComponent<Rigidbody>().AddExplosionForce(50f, gameObject.transform.position, 200f, 1f, ForceMode.VelocityChange);
+
+        //Debug.Log(v.magnitude);
+
+        //lineObject.transform.rot
+    }
+
+    bool isEdgeDrawn(int adjTriIdx, uint edgeType, bool[] trisCulled)
+    {
+
+        // If the type value is <= 0, then never draw the edge.
+        if (edgeType <= 0) return false;
+
+        // If the type value is 2, then always draw the edge.
+        if (edgeType == 2) return true;
+        
+        // If there's no adjacent face (adjTriIdx == -1), or if the adjacent face is showing its backface, then draw the edge.
+        if (adjTriIdx < 0 || trisCulled[adjTriIdx]) return true;
+
+        // Otherwise, don't draw it.
+        return false;
+    }
+
     // Update is called once per frame
     void Update()
     {
+        /*Vector4[] clipPos = new Vector4[maxVertCount];
+        vertsPosRWBuffer.GetData(clipPos);
+        foreach(var e in clipPos)
+		{
+            Debug.Log(e);
+        }*/
+
+        if (Input.GetKeyDown(KeyCode.Space))
+		{
+            Explode();
+		}
+
+
         // Clear the RWBuffer each frame.
-        //Graphics.ClearRandomWriteTargets();
+        Graphics.ClearRandomWriteTargets();
         foreach(var m in materials) { 
             m.SetPass(2);
             m.SetBuffer("vertsPosRWBuffer", vertsPosRWBuffer);
@@ -225,8 +405,8 @@ public class SolidWire : MonoBehaviour
 
     void OnDestroy()
     {
-        try
-        {
+        /*try
+        {*/
             vertsPosRWBuffer.Release();
             triIdxBuffer.Release();
             triAdjBuffer.Release();
@@ -234,10 +414,10 @@ public class SolidWire : MonoBehaviour
             vertsPosRWBuffer.Dispose();
             triIdxBuffer.Dispose();
             triAdjBuffer.Dispose();
-        }
+        /*}
         catch (Exception err)
         {
             // Do nothing.
-        }
+        }*/
     }
 }
