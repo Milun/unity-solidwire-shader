@@ -101,27 +101,6 @@ public class SolidWire : MonoBehaviour
             triAdjs[i + 2] = adj[2];
         }
     }
-    /*
-    bool isTriCulled(float2 p0, float2 p1, float2 p2)
-    {
-        float a = 0;
-        a += (p1.x - p0.x) * (p1.y + p0.y);
-        a += (p2.x - p1.x) * (p2.y + p1.y);
-        a += (p0.x - p2.x) * (p0.y + p2.y);
-
-        return a > 0;
-    }
-
-    bool isTriCulledByIdx(uint triIdx)
-    {
-        uint3 t = triIdxBuffer[triIdx];
-
-        float2 p0 = vertsPosRWBuffer[t.x].xy / vertsPosRWBuffer[t.x].w;
-        float2 p1 = vertsPosRWBuffer[t.y].xy / vertsPosRWBuffer[t.y].w;
-        float2 p2 = vertsPosRWBuffer[t.z].xy / vertsPosRWBuffer[t.z].w;
-
-        return isTriCulled(p0, p1, p2);
-    }*/
 
     /// <summary>
     /// 
