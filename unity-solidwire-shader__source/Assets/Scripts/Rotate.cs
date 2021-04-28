@@ -14,8 +14,7 @@ public class Rotate : MonoBehaviour
     void Update()
     {
         transform.Rotate(Vector3.up, Time.deltaTime*70f, Space.World);
-
-        //transform.position = Vector3.forward * (Mathf.Cos(Time.time) * 40f + 44f);
+        //transform.position = Vector3.right * (Mathf.Cos(Time.time) * 10f);
 
         //this.GetComponent<MeshRenderer>().material.SetFloat("_WireStrength", 1.5f + Mathf.Cos(Time.time));
     }
