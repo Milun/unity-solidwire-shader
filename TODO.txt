@@ -11,5 +11,3 @@ TODO for SolidWire:
 - In Unity, irregular scales change the line colour intensity.
 - Sometimes, removing dynamically made SolidWire meshes throws an error.
 - Hard to click on most SolidWire objects in Unity.
-
-Testing.
