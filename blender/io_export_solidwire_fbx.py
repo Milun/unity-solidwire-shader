@@ -369,12 +369,13 @@ class EXPORT_OT_SolidWireFBX(Operator, ExportHelper):
                     t = LNORMAL
                     if e.smooth == False:
                         t = LALWAYS
+                        e.smooth = True # The edge doesn't need to be marked as sharp anymore.
                     if e.seam == True:
                         t = LHIDE
                     if e.index in fakeEdges:
                         t = LNEVER
 
-                    # Find the 1|2 faces that this edge belongs to, and record the lowest material index of them (it will take priority).
+                    # Find the 1 or 2 faces that this edge belongs to, and record the lowest material index of them (it will take priority).
                     matIndex = float("inf")
                     for f in bm.faces:
                         if e.verts[0] in f.verts and e.verts[1] in f.verts:
@@ -413,12 +414,12 @@ class EXPORT_OT_SolidWireFBX(Operator, ExportHelper):
                 # Rules:
                 # - If the edge from v0 to v1 is sharp, then v0 will have the sharp UVs set.
                 # - If the edge from v1 to v2 is sharp, then v1 will have the sharp UVs set.
-                # - etc.
+                # - If the edge from v2 to v0 is sharp, then v2 will have the sharp UVs set.
                 # - LALWAYS edges with two faces need to have one marked as LNORMAL, and one as LALWAYS (to prevent double rendering).
                 sharpEdges = [] # The second time the same sharp edge is retrieved from getEdgeData, it will be marked as smooth instead.
                 def processSharpEdge(edge, matIndex):
                     if edge.type == LALWAYS:
-                        if matIndex != edge.mat:
+                        if matIndex < edge.mat:
                             edge.type = LNORMAL
                         else:
                             if edge in sharpEdges:
@@ -431,6 +432,8 @@ class EXPORT_OT_SolidWireFBX(Operator, ExportHelper):
                     mesh.vertex_colors.new()
 
                 for face in mesh.polygons:
+
+                    #f1, f2, and f3 are booleans which are set to true if the vertices are flipped for that specific edge.
                     edge1, f1 = getEdgeData(face.vertices[0], face.vertices[1])
                     edge2, f2 = getEdgeData(face.vertices[1], face.vertices[2])
                     edge3, f3 = getEdgeData(face.vertices[2], face.vertices[0])

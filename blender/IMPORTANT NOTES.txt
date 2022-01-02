@@ -1,0 +1,1 @@
+Blender will automatically assign material 0 to loose edges. There's no way around this; just use a seperate object in Blender to get full control.
