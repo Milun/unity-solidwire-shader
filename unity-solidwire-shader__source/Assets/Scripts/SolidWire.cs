@@ -23,7 +23,7 @@ public class SolidWire : MonoBehaviour
                                             // so for now, they'll all take on the largest size.
                                             // (Wasteful I know. I hope there's a way around this in the future).
 
-    public GameObject LineObject;
+    private GameObject LineObject = null;   // Used for (experimental) explosion code.
 
     // Start is called before the first frame update
     void Start()
@@ -101,12 +101,11 @@ public class SolidWire : MonoBehaviour
     }
 
     /// <summary>
-    /// 
+    /// FIXME: Could probably be made more efficient.
     /// </summary>
     /// <param name="meshTris"></param>
     /// <param name="curTriVertIdx">Index of the first vert in the tri.</param>
     /// <returns></returns>
-    /// EXTREMELY COSTLY! NEEDS TO BE DONE BETTER.
     private void GetAdjacentTris(uint[] meshTris, int curTriVertIdx)
     {
         int t0 = triAdjs[curTriVertIdx];    // Adjacent tri 1.
@@ -173,18 +172,15 @@ public class SolidWire : MonoBehaviour
         //return output;
     }
 
-    /*public void Test2()
-	{
-        Debug.Log("Wubba");
-	}*/
-
     /// <summary>
-    /// Returns -1 if the tri at triIdx doesnt contain both edgeVertIdxs.
-    /// Returns 0,1,2 otherwise (depending on which edge on tri the match is found).
+    /// 
     /// </summary>
     /// <param name="triVertIdxs"></param>
     /// <param name="edgeVertIdxs"></param>
-    /// <returns></returns>
+    /// <returns>
+    /// Returns -1 if the tri at triIdx doesnt contain both edgeVertIdxs.
+    /// Returns 0,1,2 otherwise (depending on which edge on tri the match is found).
+    /// </returns>
     private int CheckTriContainsEdge(uint[] triVertIdxs, uint[] edgeVertIdxs)
     {
         if (triVertIdxs[0] == edgeVertIdxs[0] && triVertIdxs[1] == edgeVertIdxs[1]) return 0;
@@ -195,9 +191,6 @@ public class SolidWire : MonoBehaviour
 
         if (triVertIdxs[2] == edgeVertIdxs[0] && triVertIdxs[0] == edgeVertIdxs[1]) return 2;
         if (triVertIdxs[2] == edgeVertIdxs[1] && triVertIdxs[0] == edgeVertIdxs[0]) return 2;
-
-        //if (!Array.Exists(triVertIdxs, e => e == edgeVertIdxs[0])) return false;
-        //if (!Array.Exists(triVertIdxs, e => e == edgeVertIdxs[1])) return false;
 
         return -1;
     }
@@ -259,7 +252,9 @@ public class SolidWire : MonoBehaviour
     }
 
     /// <summary>
-    /// Experimental (creates an object for every visible line on the frame that it's called).
+    /// [Experimental] Creates an object for every visible line on the frame that it's called.
+    /// 
+    /// FIXME: Bugs out if there's more than one SolidWire mesh in the scene. Do not use!
     /// </summary>
     private void Explode()
 	{
@@ -330,7 +325,7 @@ public class SolidWire : MonoBehaviour
         Destroy(gameObject);
 	}
 
-    void GenerateLineObjects(Vector3 p1, Vector3 p2, Color color)
+    private void GenerateLineObjects(Vector3 p1, Vector3 p2, Color color)
 	{
         const float MAX_LENGTH = 2f;
         Vector3 v = p2 - p1;
@@ -349,7 +344,7 @@ public class SolidWire : MonoBehaviour
         this.GetMaterials()[0].SetColor("_Colorize", color);
 	}
 
-    void GenerateLineObject(Vector3 p1, Vector3 p2, Color color)
+    private void GenerateLineObject(Vector3 p1, Vector3 p2, Color color)
 	{
         Vector3 v = p2 - p1;
 

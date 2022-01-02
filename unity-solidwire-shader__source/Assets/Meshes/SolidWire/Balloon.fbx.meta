@@ -9,6 +9,11 @@ ModelImporter:
       assembly: UnityEngine.CoreModule
       name: No Name
     second: {fileID: 2100000, guid: c065feb6247baae4a8ccd59252479290, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: SolidWireDefault
+    second: {fileID: 2100000, guid: c065feb6247baae4a8ccd59252479290, type: 2}
   materials:
     materialImportMode: 1
     materialName: 0

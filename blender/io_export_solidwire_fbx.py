@@ -1,5 +1,5 @@
 bl_info = {
-    "name": "Export SolidWire FBX",
+    "name": "SolidWire FBX",
     "blender": (2, 92, 0),
     "category": "Object",
 }
@@ -518,7 +518,11 @@ class EXPORT_OT_SolidWireFBX(Operator, ExportHelper):
             use_mesh_modifiers= True, # Apply non-armature modifiers.
             use_metadata=       True, 
             axis_forward=       self.axis_forward, 
-            axis_up=            self.axis_up
+            axis_up=            self.axis_up,
+
+            # These two settings ensure the best chance that the FBX is imported into Unity correctly.
+            apply_scale_options='FBX_SCALE_UNITS',
+            bake_space_transform=True,
         )
 
         # Re-enable printing to console.
