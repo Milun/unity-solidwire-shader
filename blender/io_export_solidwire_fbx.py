@@ -1,5 +1,5 @@
 bl_info = {
-    "name": "SolidWire FBX",
+    "name": "Export SolidWire FBX",
     "blender": (2, 92, 0),
     "category": "Object",
 }
@@ -90,7 +90,7 @@ class NullIO(StringIO):
 class EXPORT_OT_SolidWireFBX(Operator, ExportHelper):
     """Export to SolidWire FBX"""      # Use this as a tooltip for menu items and buttons.
     bl_idname = "export_scene.solidwire_fbx"        # Unique identifier for buttons and menu items to reference.
-    bl_label = "Export SolidWire FBX"         # Display name in the interface.
+    bl_label = "SolidWire FBX"         # Display name in the interface.
     bl_options = {'REGISTER', 'UNDO'}  # Enable undo for the operator.
 
     # ExportHelper mixin class uses this
@@ -229,8 +229,10 @@ class EXPORT_OT_SolidWireFBX(Operator, ExportHelper):
                 # Apply all non-ignored modifiers (the mesh modifiers) to the dupes.
                 for modifier in obj.modifiers:
                     if modifier.type not in MODIFIERS_TO_IGNORE:
-                        print("----- Modifier applied: %s" % (modifier.name))
-                        bpy.ops.object.modifier_apply(modifier=modifier.name)
+                        # Don't apply it if it's been disabled in the properties window.
+                        if modifier.show_viewport:
+                            print("----- Modifier applied: %s" % (modifier.name))
+                            bpy.ops.object.modifier_apply(modifier=modifier.name)
 
                 # Triangulate the object. Every triangle in the final mesh needs to be processed for SolidWire.
                 triangulateObject(obj)
@@ -457,9 +459,16 @@ class EXPORT_OT_SolidWireFBX(Operator, ExportHelper):
                     # vertex colors instead.
                     # Assign the lowest mat color of each edge to its vert0.
                     matSlots = obj.material_slots
-                    mesh.vertex_colors.active.data[face.loop_indices[0]].color = matSlots[edge1.mat].material.diffuse_color
-                    mesh.vertex_colors.active.data[face.loop_indices[1]].color = matSlots[edge2.mat].material.diffuse_color
-                    mesh.vertex_colors.active.data[face.loop_indices[2]].color = matSlots[edge3.mat].material.diffuse_color
+                    
+                    # If this mesh has no materials, default to white instead.
+                    if len(matSlots) == 0:
+                        mesh.vertex_colors.active.data[face.loop_indices[0]].color = (1,1,1,1)
+                        mesh.vertex_colors.active.data[face.loop_indices[1]].color = (1,1,1,1)
+                        mesh.vertex_colors.active.data[face.loop_indices[2]].color = (1,1,1,1)
+                    else:
+                        mesh.vertex_colors.active.data[face.loop_indices[0]].color = matSlots[edge1.mat].material.diffuse_color
+                        mesh.vertex_colors.active.data[face.loop_indices[1]].color = matSlots[edge2.mat].material.diffuse_color
+                        mesh.vertex_colors.active.data[face.loop_indices[2]].color = matSlots[edge3.mat].material.diffuse_color
                     
                     
                     #face.material_index = 0
