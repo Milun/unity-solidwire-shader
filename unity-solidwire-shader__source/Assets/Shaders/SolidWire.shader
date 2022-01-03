@@ -372,41 +372,19 @@
                 float4 vert = getClipPos(v.vertex, _Flatten);
                 o.pos = UnityObjectToClipPos(vert);
 
-                //o.pos.xy *= o.pos.w;
-                //o.pos.xy /= 20;
-
-                //o.pos = UnityObjectToClipPos(v.vertex);
-                //o.pos /= abs(o.pos.w);
-
-                //o.pos += wPos;
-
-                // --------------------------
-
-
                 o.idxType.x = (int)v.vertexId; // Store the REAL index of the vert (the index set by the Blender export script is used by .cs only).
                 o.idxType.y = (int)v.uv.y;
 
                 o.color = v.color;
-                //o.screenPos = ComputeScreenPos(o.pos);
 
                 // Store the Screen position of the vert in the buffer.
-                // THIS FIXED THE STUPID BLINKING EDGE PROBLEM?
                 vertsPosRWBuffer[v.vertexId] = o.pos;
-
-                // TBA: Set the color palette index value here somehow.
-
-                // Store the Screen position of the vert in the buffer.
-                //vertsPosRWBuffer[v.vertexId] = o.pos;
 
                 return o;
             }
 
-            /// Geom
-            /// ====
-
             // Stores each tri's 3 vert indexes (mesh.triangles) as uint3s.
             StructuredBuffer<uint3> triIdxBuffer;
-            // triIdxBuffer.Length;
             int triIdxCount;
 
             // Stores each tri's 3 adjacent tri indexes (or -1 if there's no adjacent tri on an edge).
@@ -427,6 +405,9 @@
                 return -1;
             }
 
+            /**
+             * Appends 4 vertices to create a plane for a specific wire.
+             */
             float _WireThickness;
             float _AdjustThickness;
             float _LooseWireThicknessMulti;
@@ -434,19 +415,18 @@
             void appendEdge(float4 p1, float4 p2, float4 _color, float edgeLength, bool isLoose, inout TriangleStream<g2f> OUT)
             {
                 // TODO: STOP THE ERROR BEING THROWN WHEN THERE'S NO MATERIALS.
-
                 float4 color = colorize(_color, _Colorize);
 
                 float wireThickness = _WireThickness;
 
-                // Experimental: increase wire width slightly based on luminance.
+                // [Experimental] increase wire width slightly based on luminance.
                 if (_AdjustThickness && triIdxCount != 0) {
                     float luminance = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
                     float l = 1 - luminance;
                     wireThickness += l * l * 3;
                 }
 
-                // If the edge is loose, make it slightly thicker (stylistic choice).
+                // If the edge is loose, make it slightly thicker based on _LooseWireThicknessMulti (stylistic choice).
                 wireThickness = (wireThickness * (isLoose ? _LooseWireThicknessMulti : 1.0)) / _ScreenParams.x;
 
                 // Have the wireThickness be the same amount of pixels REGARDLESS of the viewport size.
@@ -457,18 +437,12 @@
 
                 // Ensure that the line thickness is even regardless of screen size and rotation.
                 float ratio = _ScreenParams.x / _ScreenParams.y;
-                //ratio = 1;
 
                 float2 _t = normalize((p2.xy * p1.w) - (p1.xy * p2.w)); // Important to swap the .w multiplication.
                 float2 t = float2(_t.y, -_t.x); // Line tangent
                 float4 n = normalize(p2 - p1);  // Line normal
 
-                // NEXT THING TO TAKE CARE OF: Shared colours (look at the rooster's neck).
-                // A good intensity for default is probably like 0.8 - 0.9.
-                // Also, maybe the line intensity can be done if I do something like multiply the rgb of the colour by intensity to make it brighter, but have all colours be 0.5 (so they'll overlap each other and increase intensity?).
-
-
-                // P1
+                // p1 (start of line)
                 // ----------------------------------------
                 float4 c1 = p1; // Corner1
                 float4 c2 = p1; // Corner2
@@ -478,12 +452,8 @@
                 off2.y *= ratio;
                 c1.xy += off1;
                 c2.xy += off2;
-                /*float4 w1 = n * p1.w * wireThickness;
-                w1.y *= ratio;
-                c1 -= w1;
-                c2 -= w1;*/
 
-                // P2
+                // p2 (end of line)
                 // ----------------------------------------
                 float4 c3 = p2; // Corner3
                 float4 c4 = p2; // Corner4
@@ -493,28 +463,23 @@
                 t4.y *= ratio;
                 c3.xy += t3;
                 c4.xy += t4;
-                /*float4 w2 = n * p2.w * wireThickness;
-                w2.y *= ratio;
-                c3 += w2;
-                c4 += w2;*/
 
 
-                // Corner rounding (used by the frag shader).
-                // LOOK UP HOW THE OTHER GUY DID IT
-                // LOOK UP HOW THE OTHER GUY DID IT
-                // LOOK UP HOW THE OTHER GUY DID IT
-                // LOOK UP HOW THE OTHER GUY DID IT
-                // LOOK UP HOW THE OTHER GUY DID IT
-                // LOOK UP HOW THE OTHER GUY DID IT
-                // LOOK UP HOW THE OTHER GUY DID IT IN 2D
+                // TODO: Corner rounding
+                // --------------------------------------------------
+                // Round the edges of the lines to make them capsules instead of rectangles.
+                // (Not currently implemented yet).
                 float3 d0;
-                d0.xy = float2(edgeLength, 0.0) * p1.w; //* cornerSize;
+                d0.xy = float2(edgeLength, 0.0) * p1.w; // * cornerSize;
                 d0.z = 1.0 / p1.w;
 
                 float3 d1;
-                d1.xy = float2(0.0, edgeLength) * p2.w; // *cornerSize;
+                d1.xy = float2(0.0, edgeLength) * p2.w; // * cornerSize;
                 d1.z = 1.0 / p2.w;
 
+
+                // Append verts
+                // --------------------------------------------------
                 o.pos = c1;
                 o.color = color;
                 o.dist = d0;
@@ -575,12 +540,12 @@
                 return false;
             }
 
-            // For some reason, the following only workds with Unity's unimplemented triangleadj.
-            // I tried using triangle instead, and it gave different results.
+            // FIXME?: For some reason, the following only works with Unity's unimplemented 'triangleadj'.
+            // I tried using 'triangle' instead, and it gave different results.
             fixed4 _WireColor0;
             fixed4 _WireColor1;
             fixed4 _WireColor2;
-            [maxvertexcount(12)] // Important to accomodate for the maximum amount of lines being rendered with tristip (which is 4x3).
+            [maxvertexcount(12)] // Important to accomodate for the maximum amount of lines being rendered (each line has 4 verts, so = 4x3).
             void geom(triangleadj v2g IN[6], inout TriangleStream<g2f> OUT)
             {
                 // Used to calculate corner highlights.
@@ -591,10 +556,8 @@
                 float edge1Length = length(p2 - p1);
                 float edge2Length = length(p0 - p2);
 
-                // TODO: Allow for loose edges to have the NEVER draw type.
-
                 // Loose edges
-                // ===========
+                // -----------------------------------------------------------
                 if (IN[0].idxType.y < 0) {
                     appendEdge(IN[1].pos, IN[2].pos, IN[0].color, edge1Length, true, OUT);
                     return;
@@ -608,69 +571,40 @@
                     return;
                 }
 
-                /*float test = isTriCulledTest(p0, p1, p2);
-                if (test < 0) color = float4(1,0,0,1);
-                if (test == 0) color = float4(0,1,0,1);
-                if (test > 0) color = float4(0,0,1,1);*/
-
-                /*bool triCulled = isTriCulled(
-                (IN[1].screenPos.xy / IN[1].screenPos.w) * _ScreenParams.xy,
-                (IN[0].screenPos.xy / IN[0].screenPos.w) * _ScreenParams.xy,
-                (IN[2].screenPos.xy / IN[2].screenPos.w) * _ScreenParams.xy
-                );*/
+                // If the tri that these edges belong to is currently backface culled, skip it.
                 bool triCulled = isTriCulled(p0, p1, p2);
-                // If this tri is culled, skip it.
-                //float test2 = 0.001;
-                //if (edge0Length > test2&& edge1Length > test2&& edge2Length > test2) {
-                    if (triCulled) return;
-                //}
+                if (triCulled) return;
 
                 // Main edges
-                // ==========
+                // -----------------------------------------------------------
                 uint triIdx = getTriIdx(IN[0].idxType.x, IN[1].idxType.x, IN[2].idxType.x); // Index of this tri.
-                //triIdx -= 1;
                 int3 adj = triAdjBuffer[triIdx]; // Indexes of the 3 adjacent tris to this one (or -1 if there's no tri on a specific side).
 
-                //bool test = false;
-
                 // edge0
+                // -----
                 if (isEdgeDrawn(adj.x, IN[1].idxType.y)) {
                     appendEdge(IN[0].pos, IN[1].pos, IN[1].color, edge0Length, false, OUT);
                 }
 
+                // edge1
+                // -----
                 if (isEdgeDrawn(adj.y, IN[2].idxType.y)) {
                     appendEdge(IN[1].pos, IN[2].pos, IN[2].color, edge1Length, false, OUT);
                 }
 
+                // edge2
+                // -----
                 if (isEdgeDrawn(adj.z, IN[0].idxType.y)) {
                     appendEdge(IN[2].pos, IN[0].pos, IN[0].color, edge2Length, false, OUT);
                 }
             }
 
-            /// Frag
-            /// ====
             float _WireStrength;
             fixed4 frag(g2f IN) : SV_Target
             {
-                //float minDistanceToCorner = min(IN.dist[0], IN.dist[1]) * IN.dist[2];
-
-                // Normal line color.
-                //if (minDistanceToCorner > 0.9) {
-                    half4 color = (half4)IN.color * _WireStrength;
-                    //color.a = 0.9;
-                    //color.a = 0.5;
-                    //color = half4(1,1,1,1);
-                    //color.a = 0.2;
-                    color.a = 0.7; // Doesn't actually affect the alpha, but affects how intense the blending will be.
-                    return color;
-                //}
-
-                // Corner highlight color.
-                /*half4 cornerColor = (half4)IN.color;
-                cornerColor.xyz += half3(0.2,0.2,0.2); // Corners are slightly lighter.
-                //cornerColor.a = 0.2;
-
-                return (half4)cornerColor * _WireStrength * _WireCornerStrength;*/
+                half4 color = (half4)IN.color * _WireStrength;
+                color.a = 0.7; // Doesn't actually affect the alpha, but affects how intense the blending will be.
+                return color;
             }
 
             ENDCG

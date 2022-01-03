@@ -23,7 +23,7 @@ public class SolidWire : MonoBehaviour
                                             // so for now, they'll all take on the largest size.
                                             // (Wasteful I know. I hope there's a way around this in the future).
 
-    private GameObject LineObject = null;   // Used for (experimental) explosion code.
+    private GameObject LineObject = null;   // FIXME: Used for (experimental) explosion code.
 
     // Start is called before the first frame update
     void Start()
@@ -261,7 +261,7 @@ public class SolidWire : MonoBehaviour
         if (!LineObject) return;
 
         // Clip positions for each of the vertices.
-        // FIXME! THIS ONLY WORKS IF THERE'S ONLY ONE SOLIDWIRE MESH IN THE STAGE.
+        // FIXME: THIS ONLY WORKS IF THERE'S ONLY ONE SOLIDWIRE MESH IN THE STAGE.
         // I guess it's reading from the vertsPosRWBuffer incorrectly...
         Vector4[] clipPositions = new Vector4[maxVertCount];
         vertsPosRWBuffer.GetData(clipPositions);
@@ -353,12 +353,6 @@ public class SolidWire : MonoBehaviour
         lineObject.transform.localScale = new Vector3(1f,1f,v.magnitude);
         lineObject.transform.rotation = Quaternion.LookRotation(v.normalized);
         lineObject.GetComponent<SolidWire>().SetColor(color);
-
-        //lineObject.GetComponent<Rigidbody>().AddExplosionForce(50f, gameObject.transform.position, 200f, 1f, ForceMode.VelocityChange);
-
-        //Debug.Log(v.magnitude);
-
-        //lineObject.transform.rot
     }
 
     bool isEdgeDrawn(int adjTriIdx, uint edgeType, bool[] trisCulled)
@@ -380,18 +374,10 @@ public class SolidWire : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        /*Vector4[] clipPos = new Vector4[maxVertCount];
-        vertsPosRWBuffer.GetData(clipPos);
-        foreach(var e in clipPos)
-		{
-            Debug.Log(e);
-        }*/
-
-        if (Input.GetKeyDown(KeyCode.Space))
+        /*if (Input.GetKeyDown(KeyCode.Space))
 		{
             Explode();
-		}
-
+		}*/
 
         // Clear the RWBuffer each frame.
         Graphics.ClearRandomWriteTargets();
