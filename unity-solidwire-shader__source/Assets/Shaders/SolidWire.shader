@@ -1,38 +1,65 @@
-﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
-
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-Shader "Custom/SolidWire"
+﻿Shader "Custom/SolidWire"
 {
     Properties
     {
-        _WireStrength("Wire strength", Range(0.1, 5.0)) = 1.5
-        _WireThickness("Wire thickness", Range(0.1, 4.0)) = 1.0
-        _LooseWireThicknessMulti("Loose wire thickness multi", Range(0.0, 3.0)) = 1.25
-        [MaterialToggle] _AdjustThickness("Adjust thickness based on color brightness.", Float) = 0 // Darker colours appear "thinner"; this attempts to balance them by making the lines thicker.
-        [MaterialToggle] _Flatten("Flatten the mesh.", Float) = 0                                   // Make the mesh appear the same regardless of screen position.
-        _Colorize("Colorize", Color) = (0,0,0,1)
-        //_WireCornerSize("Wire corner size", RANGE(0, 1000)) = 800
-        //_WireCornerStrength("Wire corner strength", RANGE(0.0, 10.0)) = 1.5
-        //_AlbedoColor("Albedo color", Color) = (0,0,0,1)
+        _WireStrength("Wire strength", Range(0.1, 5.0)) = 1.5       // Controls the brightness of the edges.
+        _WireThickness("Wire thickness", Range(0.1, 4.0)) = 1.0     // Edge thickness
+        _LooseWireThicknessMulti("Loose wire thickness multi", Range(0.0, 3.0)) = 1.25              // Allows custom widths for edges which aren't attached to tris.
+        [MaterialToggle] _AdjustThickness("Adjust thickness based on color brightness.", Float) = 0 // Certain colours appear darker to our eyes; this attempts to counter that by making the edges thicker based on their colour.
+        [MaterialToggle] _Flatten("Flatten the mesh.", Float) = 0                                   // [EXPERIMENTAL] Flatten the mesh until it's almost 2D.
+        _Colorize("Colorize", Color) = (0,0,0,1)                                                    // [EXPERIMENTAL] Force all lines in the mesh to be a certain colour.
     }
-    SubShader
-    {
-        //Tags { "RenderType"="Opaque" "IgnoreProjector" = "True" "PreviewType" = "Plane" }
-        Tags { "RenderType" = "Transparent" "IgnoreProjector" = "True" /*"PreviewType" = "Plane"*/ }
-        Blend SrcAlpha OneMinusSrcAlpha
-        //Blend Off
-        LOD 200
-        Cull Back
-        //ZWrite Off
-        //ZTest On
+
+    CGINCLUDE
+        /**
+         * Returns an object pos that has been modified if _Flatten is true.
+         */
+        float4 getClipPos(float4 vertex, bool isFlattened) {
+
+            if (isFlattened) {
+                float4 wPos = mul(unity_ObjectToWorld, float4(0, 0, 0, -1));
+
+                //Convert the vert to world space.
+                float4 vert = mul(unity_ObjectToWorld, vertex);
+
+                // Subtract the object's world position from it (keep it centered around 0,0, to keep the perspective the same).
+                //vert.xy += wPos.xy;
+                vert.z += wPos.z;
+                vert.z *= 0.1;
+                vert.z -= wPos.z;
+
+                // Convert vert back to local space
+                vert = mul(unity_WorldToObject, vert);
+                return vert;
+            }
+            else {
+                return vertex;
+            }
+        }
 
         /**
-        * Unity Editor outline pass.
+         * Lerps the color to the colorize value based on colorize.a.
+         */
+        float4 colorize(float4 color, float4 colorize) {
+            
+            float4 c = colorize;
+            c.a = 1.0;
+            c = lerp(color, c, colorize.a);
+
+            return c;
+        }
+    ENDCG
+
+    SubShader
+    {
+        Tags { "RenderType" = "Transparent" "IgnoreProjector" = "True" }
+        Blend SrcAlpha OneMinusSrcAlpha
+        LOD 200
+        Cull Back
+
+        /**
+        * Unity Editor outline pass
+        * ----------------------------------------------------------------------------
         * This pass exists to add a basic outline to the mesh while in edit mode (so that the basic shape of the mesh is visible).
         * It won't be drawn while the game is running.
         */
@@ -41,14 +68,12 @@ Shader "Custom/SolidWire"
             Name "EditorWire"
 
             Cull Front
-            //ZWrite Off
 
             CGPROGRAM
             #include "UnityCG.cginc"
             #pragma vertex vert
             #pragma fragment frag
             #pragma geometry geom
-            //#pragma surface surf Lambert alpha
 
             static const float PREVIEW_THICKNESS = 1.5;
 
@@ -91,36 +116,26 @@ Shader "Custom/SolidWire"
                 // Consistent perspective
                 // --------------------------
                 // Get the whole object's world position.
-                float4 vert = v.vertex;
-                if (_Flatten) {
-                    float4 wPos = mul(unity_ObjectToWorld, float4(0, 0, 0, -1));
-                    //Convert the vert to world space.
-                    vert = mul(unity_ObjectToWorld, v.vertex);
-                    // Subtract the object's world position from it (keep it centered around 0,0, to keep the perspective the same).
-                    //vert.xy += wPos.xy;
-                    vert.z += wPos.z;
-                    vert.z *= 0.1;
-                    vert.z -= wPos.z;
-                    // Convert vert back to local space
-                    vert = mul(unity_WorldToObject, vert);
-                    o.pos = UnityObjectToClipPos(vert);
-                }
-                else {
-                    o.pos = UnityObjectToClipPos(v.vertex);
-                }
+                float4 vert = getClipPos(v.vertex, _Flatten);
+                o.pos = UnityObjectToClipPos(vert);
 
                 // (Doubt this is the best way to determine this).
                 // The Unity assets preview is set to draw this material as a plane.
                 // Determine whether the shader is currently rendering that plane by checking if its vertices are at abs(0.5).
                 // NOTE: If there's a mesh with exactly these coordinates in the Scene view, it will also be affected by this in the editor.
                 //       (It will be rendered correctly when the game runs).
-                o.isPreview = (abs(v.vertex.x) == 0.5 && abs(v.vertex.y) == 0.5) ? 1 : 0;
+                // 
+                // EDIT: With sphere previews, this check doesn't work.
+                //o.isPreview = (abs(v.vertex.x) == 0.5 && abs(v.vertex.y) == 0.5) ? 1 : 0;
+
+                o.isPreview = false;
 
                 return o;
             }
 
             // For whatever reason, triangleadj works, while triangle doesn't.
             float _WireThickness;
+            float4 _Colorize;
             [maxvertexcount(6)]
             void geom(triangleadj v2g IN[6], inout TriangleStream<g2f> triangleStream)
             {
@@ -128,40 +143,44 @@ Shader "Custom/SolidWire"
 
                 if (triIdxCount != 0) return; // Don't draw unless in edit mode.
 
+                // Apply explicit colorization based on _Colorize's alpha.
+                float4 c = colorize(IN[0].color, _Colorize);
+
                 // Check if this geom is being rendered inside of the Asset preview.
                 if (IN[0].isPreview != 1 || IN[1].isPreview != 1 || IN[2].isPreview != 1) {
 
                     // This is a tri drawn inside the Scene view.
                     o.pos = IN[0].pos;
-                    o.color = IN[0].color;
+                    o.color = c;
                     triangleStream.Append(o);
 
                     o.pos = IN[1].pos;
-                    o.color = IN[0].color;
+                    o.color = c;
                     triangleStream.Append(o);
 
                     o.pos = IN[2].pos;
-                    o.color = IN[0].color;
+                    o.color = c;
                     triangleStream.Append(o);
                 }
                 else {
+
                     // This is a tri drawn inside the Asset preview. Render it differently.
                     o.pos = IN[0].pos;
-                    o.color = IN[0].color;
+                    o.color = c;
                     o.pos.x *= -PREVIEW_THICKNESS * _WireThickness;
                     o.pos.y *= PREVIEW_THICKNESS * _WireThickness;
                     o.pos.w *= 1.01;
                     triangleStream.Append(o);
 
                     o.pos = IN[1].pos * 2.1;
-                    o.color = IN[0].color;
+                    o.color = c;
                     o.pos.x *= -PREVIEW_THICKNESS * _WireThickness;
                     o.pos.y *= PREVIEW_THICKNESS * _WireThickness;
                     o.pos.w *= 1.01;
                     triangleStream.Append(o);
 
                     o.pos = IN[2].pos * 2.1;
-                    o.color = IN[0].color;
+                    o.color = c;
                     o.pos.x *= -PREVIEW_THICKNESS * _WireThickness;
                     o.pos.y *= PREVIEW_THICKNESS * _WireThickness;
                     o.pos.w *= 1.01;
@@ -179,6 +198,7 @@ Shader "Custom/SolidWire"
 
         /**
         * Body pass
+        * ----------------------------------------------------------------------------
         * This pass draws the mesh in pure black with its vertices slighty contracted.
         * The body is used to obscure edges that would be hidden behind the mesh normally.
         */
@@ -209,7 +229,8 @@ Shader "Custom/SolidWire"
                 float4 pos : POSITION;
                 float4 normal : NORMAL;
                 float4 color: COLOR1;
-                int2 idxType : COLOR0; // x = vert mesh index (ignored bu .shader. Used by .cs) | y = vert edge type (used by shader): -1 | 0 | 1 | 2
+                int2 idxType : COLOR0; // x = vert mesh index (the shader script doesn't use this, but SolidWire.cs does)
+                                       // y = vert edge type: -1 | 0 | 1 | 2 (used by shader script) 
             };
 
             struct g2f
@@ -217,67 +238,25 @@ Shader "Custom/SolidWire"
                 float4 pos : SV_POSITION;
             };
 
+            /**
+             * Reduces the size of the solid body along its normals so that it doesn't cause z-fighting with the Wire pass,
+             * but still obscures any lines which would normally be obscured by geometry closer to the camera.
+             */
             float _Flatten;
             v2g vert(appdata v)
             {
                 v2g o;
 
-                /**
-                * Reduce the size of the solid body along its normals so that it doesn't cause z-fighting with the Wire pass,
-                * but still obscures any lines which would normally be obscured by geometry closer to the camera.
-                */
-
-                //Convert the vert to world space.
-                /*float4 vert = mul(unity_ObjectToWorld, v.vertex);
-                // Subtract the object's world position from it (keep it centered around 0,0, to keep the perspective the same).
-                vert.z *= 0.1;
-                // Convert vert back to local space
-                vert = mul(unity_WorldToObject, vert);
-                o.pos = UnityObjectToClipPos(vert);*/
-
-                // Consistent perspective
-                // --------------------------
-                // Get the whole object's world position.
-                float4 vert = v.vertex;
-                if (_Flatten) {
-                    float4 wPos = mul(unity_ObjectToWorld, float4(0, 0, 0, -1));
-                    //Convert the vert to world space.
-                    vert = mul(unity_ObjectToWorld, v.vertex);
-                    // Subtract the object's world position from it (keep it centered around 0,0, to keep the perspective the same).
-                    //vert.xy += wPos.xy;
-                    vert.z += wPos.z;
-                    vert.z *= 0.1;
-                    vert.z -= wPos.z;
-                    // Convert vert back to local space
-                    vert = mul(unity_WorldToObject, vert);
-                    o.pos = UnityObjectToClipPos(vert);
-                }
-                else {
-                    o.pos = UnityObjectToClipPos(v.vertex);
-                }
-
-                //o.pos = UnityObjectToClipPos(v.vertex);
-
-                //o.pos.xy *= o.pos.w;
-                //o.pos.xy /= 20;
+                float4 vert = getClipPos(v.vertex, _Flatten);
+                o.pos = UnityObjectToClipPos(vert);
 
                 // Get the normal clip pos.
-                //o.pos = UnityObjectToClipPos(v.vertex);
                 o.normal = normalize(v.normal);
                 o.color = v.color;
 
                 float4 posExt = UnityObjectToClipPos(vert.xyz - normalize(v.normal));
                 float4 diff = o.pos - posExt;
                 o.normal = -normalize(diff);
-
-                /*if (_Flatten) {
-                    float4 vert = mul(unity_ObjectToWorld, v.vertex);
-                    vert.z += wPos.z;
-                    vert.z *= 0.1;
-                    vert.z -= wPos.z;
-                    vert = mul(unity_WorldToObject, vert);
-                    o.pos = UnityObjectToClipPos(vert);
-                }*/
 
                 o.idxType = (int2)v.uv;
 
@@ -286,32 +265,32 @@ Shader "Custom/SolidWire"
 
             float _WireThickness;
             int triIdxCount;
-
             float4 GetOffsetThickness() {
 
                 float wireThickness = (_WireThickness) / _ScreenParams.x;
+
                 // If in editor, contract slightly more (to make the lines more visible).
-                // Offset the body less if the mesh is has been _Flattened.
+                // Offset the body less if the mesh has been _Flattened.
                 wireThickness *= triIdxCount == 0 ? 2 : (_Flatten == 1 ? 0.4 : 1.25);
-                //float ratio = _ScreenParams.x / _ScreenParams.y;
 
                 return wireThickness;
             }
 
-            // For whatever reason, triangleadj works, while triangle doesn't.
-            [maxvertexcount(6)]
+            // FIXME? For whatever reason, triangleadj works, while triangle doesn't.
+            [maxvertexcount(3)]
             void geom(triangleadj v2g IN[6], inout TriangleStream<g2f> triangleStream)
             {
                 /**
-                * Check if a vert in this tri marks it as a "placeholder" tri.
-                * "Placeholder" tris are added by the Blender script in order to allow loose edges in meshes to be easily imported by Unity.
-                * (By default, Unity removes the loose parts of a mesh).
+                * Check if a vert in this tri marks it as a "fake" tri.
+                * "Fake" tris are tris which have two verts in the exact same location; and are exist to allow loose edges to be imported into Unity.
+                * They are created by the Blender SolidWire exporting script.
                 */
-
                 if (IN[0].idxType.y < 0) return;
                 if (IN[1].idxType.y < 0) return;
                 if (IN[2].idxType.y < 0) return;
 
+
+                // This is a real tri. Render it.
                 g2f o = (g2f)0;
 
                 float wireThickness = GetOffsetThickness();
@@ -319,11 +298,7 @@ Shader "Custom/SolidWire"
                 float4 off0 = IN[0].normal * wireThickness/1.5 * IN[0].pos.w;
                 float4 off1 = IN[1].normal * wireThickness/1.5 * IN[1].pos.w;
                 float4 off2 = IN[2].normal * wireThickness/1.5 * IN[2].pos.w;
-                /*off0.y *= ratio;
-                off1.y *= ratio;
-                off2.y *= ratio;*/
 
-                // This is a real tri. Render it.
                 o.pos = IN[0].pos + off0;
                 triangleStream.Append(o);
 
@@ -343,14 +318,17 @@ Shader "Custom/SolidWire"
 
         /**
         * Wire pass
-        * Draws the wire edges of the mesh. See readme / Github repo for more information.
+        * ----------------------------------------------------------------------------
+        * Draws the edges of the mesh.
+        * See Github wiki for more information as to what determines which edges are drawn and how.
+        * https://github.com/Milun/unity-solidwire-shader/wiki
         */
         Pass
         {
             Name "Wire"
             Cull Off
             Blend One OneMinusSrcAlpha // Lines overlap (more accurate to vector consoles).
-            //Blend Off                   // No line overlap (less accurate, but less distracting).
+            //Blend Off                // No line overlap (less accurate, but less distracting).
             ZWrite On
 
             CGPROGRAM
@@ -372,7 +350,8 @@ Shader "Custom/SolidWire"
             {
                 float4 pos : SV_POSITION;
                 float4 color : COLOR0;
-                int2 idxType : COLOR1; // x = vert mesh index (ignored bu .shader. Used by .cs) | y = vert edge type (used by shader): -1 | 0 | 1 | 2
+                int2 idxType : COLOR1; // x = vert mesh index (ignored by the shader script. Used by SolidWire.cs)
+                                       // y = vert edge type: -1 | 0 | 1 | 2 (used by shader script)
             };
 
             struct g2f
@@ -382,9 +361,6 @@ Shader "Custom/SolidWire"
                 float3 dist : TEXCOORD0; // Used to calculate corner highlights.
             };
 
-            /// Vert
-            /// ====
-
             // Store the calculated clip pos of all vertices in an array for later use.
             uniform RWStructuredBuffer<float4> vertsPosRWBuffer : register(u1);
 
@@ -393,25 +369,8 @@ Shader "Custom/SolidWire"
             {
                 v2g o;
 
-                // Consistent perspective
-                // --------------------------
-                // Get the whole object's world position.
-                if (_Flatten) {
-                    float4 wPos = mul(unity_ObjectToWorld, float4(0, 0, 0, -1));
-                    //Convert the vert to world space.
-                    float4 vert = mul(unity_ObjectToWorld, v.vertex);
-                    // Subtract the object's world position from it (keep it centered around 0,0, to keep the perspective the same).
-                    //vert.xy += wPos.xy;
-                    vert.z += wPos.z;
-                    vert.z *= 0.1;
-                    vert.z -= wPos.z;
-                    // Convert vert back to local space
-                    vert = mul(unity_WorldToObject, vert);
-                    o.pos = UnityObjectToClipPos(vert);
-                }
-                else {
-                    o.pos = UnityObjectToClipPos(v.vertex);
-                }
+                float4 vert = getClipPos(v.vertex, _Flatten);
+                o.pos = UnityObjectToClipPos(vert);
 
                 //o.pos.xy *= o.pos.w;
                 //o.pos.xy /= 20;
@@ -476,8 +435,7 @@ Shader "Custom/SolidWire"
             {
                 // TODO: STOP THE ERROR BEING THROWN WHEN THERE'S NO MATERIALS.
 
-                float4 color = _color;
-                if (_Colorize.r != 0 || _Colorize.g != 0 || _Colorize.b != 0) color = _Colorize;
+                float4 color = colorize(_color, _Colorize);
 
                 float wireThickness = _WireThickness;
 
