@@ -140,7 +140,7 @@ class EXPORT_OT_SolidWireFBX(Operator, ExportHelper):
             ('-Y', '-Y', '-Y'), 
             ('-Z', '-Z', '-Z')
         },
-        default='-Z'
+        default='Z'
     )
     
     axis_up: EnumProperty(
