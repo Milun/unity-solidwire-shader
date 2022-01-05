@@ -1,13 +1,11 @@
 TODO for SolidWire:
 
-- Error handling for the Blender export. If ANYTHING goes wrong, it needs to remove the temporary objects it creates and revert the names.
 - If no name is specified in the Blender script, it should use the Object's name.
 - Auto export NLAs for Blender script?
 - High detail models chug hard when exporting.
-- Stop Blender exporting a material when exporting (if possible).
 - Blender script screws up on some lines (I think it has something to do with vert order, because converting to and from Curve fixes it a bit).
 
 - In Unity, changing the mesh during runtime breaks the script.
 - In Unity, irregular scales change the line colour intensity.
 - Sometimes, removing dynamically made SolidWire meshes throws an error.
-- Hard to click on most SolidWire objects in Unity.
+- Hard to click on 2D SolidWire objects in Unity.
