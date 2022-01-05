@@ -1,6 +1,6 @@
 # unity-solidwire-shader
 
-![Blender preview](wiki/home/pencil-spin.gif "Spinning SolidWire pencil.")
+![Blender preview](wiki/home/pencil.png "SolidWire pencil.")
 
 ## Requirements
 
